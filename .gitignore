@@ -152,6 +152,7 @@ vite.config.ts.timestamp-*
 .tanstack/
 .vinxi/
 .nitro/
+.vercel/
 .wrangler/
 .dev.vars
 *.local
