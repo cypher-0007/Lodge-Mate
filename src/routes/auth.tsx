@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -53,7 +52,7 @@ function Auth() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
           options: {
@@ -62,15 +61,23 @@ function Auth() {
           },
         });
         if (error) throw error;
-        toast.success("Account created", { description: "Welcome to LodgeMate." });
+        if (data.session) {
+          toast.success("Account created", { description: "Welcome to LodgeMate." });
+          afterAuth();
+        } else {
+          toast.success("Check your email", {
+            description: "Use the confirmation link to finish creating your account.",
+          });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email,
           password: form.password,
         });
         if (error) throw error;
+        toast.success("Welcome back");
+        afterAuth();
       }
-      afterAuth();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -83,15 +90,11 @@ function Auth() {
       toast.error("Account access is not configured yet. Add your Supabase values to .env.");
       return;
     }
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/dashboard` },
     });
-    if (result.error) {
-      toast.error("Google sign-in failed");
-      return;
-    }
-    if (result.redirected) return;
-    afterAuth();
+    if (error) toast.error(error.message || "Google sign-in failed");
   };
 
   return (

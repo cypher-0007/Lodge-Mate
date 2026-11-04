@@ -31,10 +31,16 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 function getSupabaseConfig() {
   const serverEnv = typeof process === 'undefined' ? {} : process.env;
   return {
-    url: import.meta.env['VITE_SUPABASE_URL'] || serverEnv['SUPABASE_URL'],
+    url:
+      import.meta.env['VITE_SUPABASE_URL'] ||
+      import.meta.env['NEXT_PUBLIC_SUPABASE_URL'] ||
+      serverEnv['SUPABASE_URL'] ||
+      serverEnv['NEXT_PUBLIC_SUPABASE_URL'],
     key:
       import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] ||
-      serverEnv['SUPABASE_PUBLISHABLE_KEY'],
+      import.meta.env['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] ||
+      serverEnv['SUPABASE_PUBLISHABLE_KEY'] ||
+      serverEnv['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'],
   };
 }
 
