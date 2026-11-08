@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
+  ArrowRight,
   BadgeCheck,
   BedDouble,
   Building2,
@@ -7,19 +8,24 @@ import {
   ChevronDown,
   Flag,
   MessageCircle,
+  Phone,
   Search,
+  ShieldCheck,
+  Sparkles,
   Users,
+  Video,
   Zap,
 } from "lucide-react";
 
 import heroImage from "@/assets/hero-lodge.jpg";
-import { ListingCard } from "@/components/listing-card";
+import listingLodgeImage from "@/assets/listing-lodge.jpg";
+import { ListingCard, ListingCardSkeleton } from "@/components/listing-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { listings } from "@/lib/listings";
+import { isLocalDevPreview, useListingsQuery } from "@/lib/listings";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -84,9 +90,18 @@ const listingTypes = [
 ];
 
 function Index() {
+  const { data: liveListings = [], isLoading } = useListingsQuery();
+  const featuredListings = liveListings.slice(0, 4);
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
+
+      {isLocalDevPreview() && (
+        <div className="border-b border-warning/40 bg-warning/15 px-4 py-2.5 text-center text-xs text-warning-foreground">
+          <span className="font-semibold">Local Development Preview Mode:</span> Displaying sample student accommodations for MOUAU and ABSU. Connect Supabase in <code>.env</code> to stream live database records.
+        </div>
+      )}
 
       <main>
         {/* Hero */}
@@ -100,9 +115,19 @@ function Index() {
           />
           <div className="absolute inset-0 bg-canopy opacity-90" />
           <div className="relative mx-auto max-w-6xl px-5 pb-14 pt-20 md:pb-20 md:pt-28">
-            <Badge className="bg-leaf text-leaf-foreground hover:bg-leaf">
-              MOUAU · ABSU · 1,400+ rooms tracked
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Badge className="bg-leaf text-leaf-foreground hover:bg-leaf">
+                MOUAU · ABSU · 1,400+ rooms tracked
+              </Badge>
+              <Link
+                to="/beta-lodges"
+                className="inline-flex items-center gap-1.5 rounded-full border border-warning/50 bg-warning/20 px-3 py-1 text-xs font-semibold text-warning-foreground backdrop-blur-sm transition-all hover:bg-warning/30 hover:scale-[1.02]"
+              >
+                <Sparkles className="h-3 w-3 text-warning" />
+                <span>Beta Lodges with Direct Landlord Contacts</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.05] text-primary-foreground md:text-6xl">
               Find a room near campus without the guesswork.
             </h1>
@@ -182,10 +207,172 @@ function Index() {
             </Button>
           </div>
 
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {listings.map((l) => (
-              <ListingCard key={l.id} listing={l} />
-            ))}
+          <div className="mt-8">
+            {isLoading ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : featuredListings.length > 0 ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {featuredListings.map((l) => (
+                  <ListingCard key={l.id} listing={l} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/80 bg-card p-10 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  No verified spaces listed yet
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Check back soon as new student accommodations near MOUAU and ABSU are published.
+                </p>
+                <div className="mt-4 flex justify-center gap-3">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/browse">Browse all</Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link to="/list-a-space">List a space</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Beta Lodges Feature Section */}
+        <section className="relative overflow-hidden border-y border-border/80 bg-gradient-to-br from-[#032b21] via-[#043b2e] to-[#064e3b] text-white">
+          {/* Ambient lighting glows */}
+          <div className="pointer-events-none absolute -left-20 top-0 h-96 w-96 rounded-full bg-warning/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
+
+          <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-20 lg:py-24">
+            <div className="grid items-center gap-12 lg:grid-cols-12">
+              {/* Left Column: Copy & Value Proposition */}
+              <div className="lg:col-span-7">
+                <div className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-warning">
+                  <Sparkles className="h-3.5 w-3.5 text-warning" />
+                  <span>VIP Student Access · Beta Lodges</span>
+                </div>
+
+                <h2 className="mt-5 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                  Skip the middlemen. Get direct landlord numbers &amp; video walkthroughs.
+                </h2>
+
+                <p className="mt-4 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+                  Tired of blind agent fees and fake WhatsApp pictures? LodgeMate Beta gives students
+                  direct verified provider phone numbers, 360° video walkthroughs, and physical
+                  field-inspection reports before making any commitment.
+                </p>
+
+                {/* 3 Value Pillars */}
+                <div className="mt-8 grid gap-3.5 sm:grid-cols-3">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning/20 text-warning">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold text-white">Direct Phone Call</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-white/70">
+                      Reach the verified landlord or primary caretaker directly.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning/20 text-warning">
+                      <Video className="h-4 w-4" />
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold text-white">Video Walkthroughs</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-white/70">
+                      Tour the compound, bathroom and room layout before visiting.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning/20 text-warning">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <h3 className="mt-3 text-sm font-semibold text-white">Inspection Notes</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-white/70">
+                      Field rep reports on water, light, security and environment.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action CTA */}
+                <div className="mt-8 flex flex-wrap items-center gap-4">
+                  <Button
+                    size="lg"
+                    className="h-12 bg-warning px-7 font-semibold text-warning-foreground shadow-lg transition-transform hover:scale-[1.02] hover:bg-warning/90"
+                    asChild
+                  >
+                    <Link to="/beta-lodges">
+                      Explore Beta Lodges
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 border-white/20 bg-white/5 text-white backdrop-blur-sm hover:bg-white/10 hover:text-white"
+                    asChild
+                  >
+                    <Link to="/how-it-works">How Beta Access Works</Link>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Right Column: Visual Accommodation Card Showcase */}
+              <div className="relative lg:col-span-5">
+                <div className="relative mx-auto max-w-sm sm:max-w-md lg:max-w-none">
+                  {/* Decorative ambient blur */}
+                  <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-warning/40 to-primary/40 opacity-40 blur-xl" />
+
+                  {/* Main Visual Card */}
+                  <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/10 p-2 shadow-2xl backdrop-blur-md">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+                      <img
+                        src={listingLodgeImage}
+                        alt="Beta student lodge near campus"
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                      {/* Card Overlays */}
+                      <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-extrabold text-warning-foreground shadow-sm">
+                        <Sparkles className="h-3 w-3" /> Beta Verified
+                      </span>
+
+                      <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                        <Video className="h-3 w-3 text-warning" /> 4K Tour Included
+                      </span>
+
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <p className="text-xs font-medium text-white/80">MOUAU · Umuahia Road</p>
+                        <p className="text-lg font-bold text-white">Executive Self-Contain</p>
+                        <div className="mt-2 flex items-center justify-between border-t border-white/20 pt-2">
+                          <span className="font-mono text-sm font-bold text-warning">
+                            ₦180,000<span className="text-xs font-normal text-white/70">/year</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-md bg-white/20 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+                            <Phone className="h-3 w-3 text-warning" /> Direct Provider
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Secondary overlapping floating preview pill */}
+                    <div className="mt-2 flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white/90 backdrop-blur-md">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="font-medium">Direct Provider Access</span>
+                      </div>
+                      <span className="font-semibold text-warning">No Agent Commission</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

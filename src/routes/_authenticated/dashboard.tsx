@@ -1,15 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { DashboardShell, Panel, StatusPill } from "@/components/dashboard-shell";
+import { BetaPassStatus } from "@/components/beta-pass-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { useSavedListingsQuery, useToggleSaveListing } from "@/lib/saved-listings";
+import { useBetaLodgesConfig, useUserBetaAccess, useUserBetaPass } from "@/lib/beta-lodges";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -23,15 +27,30 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { property: "og:description", content: "Your saved inspections and available student rooms." },
     ],
   }),
+  beforeLoad: ({ context }) => {
+    // If user is exclusively a landlord/agent, redirect them to the host panel
+    if (context.isHost && !context.roles.includes("student") && !context.isAdmin) {
+      throw redirect({ to: "/host" });
+    }
+  },
   component: StudentDashboard,
 });
 
 function StudentDashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, isStudent } = useAuth();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
+  const isLive = isSupabaseConfigured();
+
+  const { data: savedListings = [], isLoading: isLoadingSaved } = useSavedListingsQuery();
+  const toggleSave = useToggleSaveListing();
+
+  // Beta Lodges pass status
+  const configQuery = useBetaLodgesConfig();
+  const accessQuery = useUserBetaAccess(user?.id);
+  const passQuery = useUserBetaPass(user?.id);
 
   const listings = useQuery({
     queryKey: ["approved-listings"],
@@ -184,6 +203,78 @@ function StudentDashboard() {
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">You haven't requested any inspections yet.</p>
+          )}
+        </Panel>
+
+        {/* Beta Lodges Access Pass Panel */}
+        <Panel
+          title="Beta Lodges"
+          description="Premium lodges with direct provider contact and video walkthroughs."
+        >
+          <BetaPassStatus
+            hasAccess={!isLive || (accessQuery.data ?? false)}
+            pass={passQuery.data ?? null}
+            config={configQuery.data ?? null}
+            isLoading={accessQuery.isLoading || configQuery.isLoading}
+            isAuthenticated={!!user}
+            isLive={isLive}
+          />
+        </Panel>
+
+        <Panel
+          title="Saved Lodges"
+          description="Rooms you bookmarked for later comparison."
+          className="lg:col-span-2"
+        >
+          {isLoadingSaved ? (
+            <p className="text-sm text-muted-foreground">Loading saved lodges…</p>
+          ) : savedListings.length > 0 ? (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {savedListings.map((l) => (
+                <li
+                  key={l.id}
+                  className="flex flex-col justify-between rounded-xl border border-border p-4 bg-card"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-sm leading-snug">{l.title}</p>
+                      <button
+                        type="button"
+                        onClick={() => toggleSave.mutate({ listingId: l.id, currentlySaved: true })}
+                        className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
+                        title="Remove bookmark"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {l.school} · {l.area} · {l.kind}
+                    </p>
+                    <p className="mt-2 text-sm font-bold text-primary">
+                      {l.price} <span className="text-xs font-normal text-muted-foreground">/{l.period}</span>
+                    </p>
+                  </div>
+                  <div className="mt-3 flex gap-2 pt-2 border-t border-border/70">
+                    <Button size="sm" variant="outline" className="text-xs h-7 flex-1" asChild>
+                      <Link to="/listings/$id" params={{ id: l.id }}>
+                        View details
+                      </Link>
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs h-7 flex-1"
+                      onClick={() => setSelected(l.id)}
+                    >
+                      Inspect
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              You haven't saved any lodges yet. Click the heart icon on any listing to save it here.
+            </p>
           )}
         </Panel>
       </div>

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BetaLodgesRouteImport } from './routes/beta-lodges'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -21,6 +22,8 @@ import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHostRouteImport } from './routes/_authenticated/host'
+import { Route as BetaLodgesIndexRouteImport } from './routes/beta-lodges/index'
+import { Route as BetaLodgesIdRouteImport } from './routes/beta-lodges/$id'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +38,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BetaLodgesRoute = BetaLodgesRouteImport.update({
+  id: '/beta-lodges',
+  path: '/beta-lodges',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrowseRoute = BrowseRouteImport.update({
@@ -82,6 +90,16 @@ const AuthenticatedHostRoute = AuthenticatedHostRouteImport.update({
   path: '/host',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const BetaLodgesIndexRoute = BetaLodgesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BetaLodgesRoute,
+} as any)
+const BetaLodgesIdRoute = BetaLodgesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => BetaLodgesRoute,
+} as any)
 const ListingsIdRoute = ListingsIdRouteImport.update({
   id: '/listings/$id',
   path: '/listings/$id',
@@ -91,6 +109,7 @@ const ListingsIdRoute = ListingsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/beta-lodges': typeof BetaLodgesRouteWithChildren
   '/browse': typeof BrowseRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
@@ -100,7 +119,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/host': typeof AuthenticatedHostRoute
+  '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
+  '/beta-lodges/': typeof BetaLodgesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -114,13 +135,16 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/host': typeof AuthenticatedHostRoute
+  '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
+  '/beta-lodges': typeof BetaLodgesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/beta-lodges': typeof BetaLodgesRouteWithChildren
   '/browse': typeof BrowseRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
@@ -130,13 +154,16 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/host': typeof AuthenticatedHostRoute
+  '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
+  '/beta-lodges/': typeof BetaLodgesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
+    | '/beta-lodges'
     | '/browse'
     | '/contact'
     | '/faq'
@@ -146,7 +173,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/host'
+    | '/beta-lodges/$id'
     | '/listings/$id'
+    | '/beta-lodges/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -160,12 +189,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/host'
+    | '/beta-lodges/$id'
     | '/listings/$id'
+    | '/beta-lodges'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/beta-lodges'
     | '/browse'
     | '/contact'
     | '/faq'
@@ -175,13 +207,16 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/host'
+    | '/beta-lodges/$id'
     | '/listings/$id'
+    | '/beta-lodges/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BetaLodgesRoute: typeof BetaLodgesRouteWithChildren
   BrowseRoute: typeof BrowseRoute
   ContactRoute: typeof ContactRoute
   FaqRoute: typeof FaqRoute
@@ -212,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/beta-lodges': {
+      id: '/beta-lodges'
+      path: '/beta-lodges'
+      fullPath: '/beta-lodges'
+      preLoaderRoute: typeof BetaLodgesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/browse': {
@@ -277,6 +319,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHostRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/beta-lodges/': {
+      id: '/beta-lodges/'
+      path: '/'
+      fullPath: '/beta-lodges/'
+      preLoaderRoute: typeof BetaLodgesIndexRouteImport
+      parentRoute: typeof BetaLodgesRoute
+    }
+    '/beta-lodges/$id': {
+      id: '/beta-lodges/$id'
+      path: '/$id'
+      fullPath: '/beta-lodges/$id'
+      preLoaderRoute: typeof BetaLodgesIdRouteImport
+      parentRoute: typeof BetaLodgesRoute
+    }
     '/listings/$id': {
       id: '/listings/$id'
       path: '/listings/$id'
@@ -302,10 +358,25 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BetaLodgesRouteChildren {
+  BetaLodgesIdRoute: typeof BetaLodgesIdRoute
+  BetaLodgesIndexRoute: typeof BetaLodgesIndexRoute
+}
+
+const BetaLodgesRouteChildren: BetaLodgesRouteChildren = {
+  BetaLodgesIdRoute: BetaLodgesIdRoute,
+  BetaLodgesIndexRoute: BetaLodgesIndexRoute,
+}
+
+const BetaLodgesRouteWithChildren = BetaLodgesRoute._addFileChildren(
+  BetaLodgesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  BetaLodgesRoute: BetaLodgesRouteWithChildren,
   BrowseRoute: BrowseRoute,
   ContactRoute: ContactRoute,
   FaqRoute: FaqRoute,

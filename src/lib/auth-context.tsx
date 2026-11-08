@@ -5,11 +5,14 @@ import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "student" | "landlord" | "admin";
 
+export type ProviderType = "landlord" | "agent";
+
 type Profile = {
   id: string;
   full_name: string | null;
   phone: string | null;
   school: string | null;
+  provider_type: ProviderType | null;
   banned: boolean;
 };
 
@@ -21,6 +24,9 @@ type AuthValue = {
   loading: boolean;
   isAdmin: boolean;
   isHost: boolean;
+  isStudent: boolean;
+  isLandlord: boolean;
+  providerType: ProviderType | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -40,8 +46,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRoles([]);
       return;
     }
+
+    // Check if there was a pending OAuth signup role stored before redirect
+    if (typeof window !== "undefined") {
+      const pendingRole = window.localStorage.getItem("lodgemate_pending_role");
+      const pendingProvider = window.localStorage.getItem("lodgemate_pending_provider") as ProviderType | null;
+      if (pendingRole) {
+        try {
+          await supabase.rpc("sync_user_signup_role", {
+            _role: pendingRole,
+            _provider_type: pendingProvider ?? null,
+          });
+        } catch {
+          // ignore if rpc is not yet available
+        } finally {
+          window.localStorage.removeItem("lodgemate_pending_role");
+          window.localStorage.removeItem("lodgemate_pending_provider");
+        }
+      }
+    }
+
     const [{ data: p }, { data: r }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, phone, school, banned").eq("id", userId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id, full_name, phone, school, provider_type, banned")
+        .eq("id", userId)
+        .maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
     setProfile((p as Profile) ?? null);
@@ -75,15 +105,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [supabaseConfigured]);
 
-  const value = useMemo<AuthValue>(
-    () => ({
+  const value = useMemo<AuthValue>(() => {
+    const isAdmin = roles.includes("admin");
+    const isHost = roles.includes("landlord") || isAdmin;
+    const isStudent = roles.includes("student") || (!roles.includes("landlord") && !isAdmin);
+    const providerType = profile?.provider_type ?? (isHost ? "landlord" : null);
+
+    return {
       user: session?.user ?? null,
       session,
       profile,
       roles,
       loading,
-      isAdmin: roles.includes("admin"),
-      isHost: roles.includes("landlord") || roles.includes("admin"),
+      isAdmin,
+      isHost,
+      isStudent,
+      isLandlord: roles.includes("landlord"),
+      providerType,
       refresh: async () => {
         await load(session?.user.id);
       },
@@ -93,9 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setRoles([]);
       },
-    }),
-    [session, profile, roles, loading],
-  );
+    };
+  }, [session, profile, roles, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

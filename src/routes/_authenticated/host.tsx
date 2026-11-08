@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +27,12 @@ export const Route = createFileRoute("/_authenticated/host")({
       },
     ],
   }),
+  beforeLoad: ({ context }) => {
+    // Prevent students from accessing landlord/agent host tools
+    if (!context.isHost) {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
   component: HostPanel,
 });
 

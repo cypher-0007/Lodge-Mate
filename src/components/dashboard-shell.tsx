@@ -64,14 +64,16 @@ export function DashboardShell({
 export function Panel({
   title,
   description,
+  className = "",
   children,
 }: {
   title: string;
   description?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <section className={`rounded-2xl border border-border bg-card p-6 shadow-sm ${className}`}>
       <h2 className="font-display text-lg font-semibold">{title}</h2>
       {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       <div className="mt-5">{children}</div>
