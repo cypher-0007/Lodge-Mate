@@ -25,6 +25,7 @@ import { Route as AuthenticatedHostRouteImport } from './routes/_authenticated/h
 import { Route as BetaLodgesIndexRouteImport } from './routes/beta-lodges/index'
 import { Route as BetaLodgesIdRouteImport } from './routes/beta-lodges/$id'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
+import { Route as ApiPaystackWebhookRouteImport } from './routes/api/paystack/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -105,6 +106,11 @@ const ListingsIdRoute = ListingsIdRouteImport.update({
   path: '/listings/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPaystackWebhookRoute = ApiPaystackWebhookRouteImport.update({
+  id: '/api/paystack/webhook',
+  path: '/api/paystack/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/beta-lodges/': typeof BetaLodgesIndexRoute
+  '/api/paystack/webhook': typeof ApiPaystackWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/beta-lodges': typeof BetaLodgesIndexRoute
+  '/api/paystack/webhook': typeof ApiPaystackWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/beta-lodges/': typeof BetaLodgesIndexRoute
+  '/api/paystack/webhook': typeof ApiPaystackWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/beta-lodges/$id'
     | '/listings/$id'
     | '/beta-lodges/'
+    | '/api/paystack/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/beta-lodges/$id'
     | '/listings/$id'
     | '/beta-lodges'
+    | '/api/paystack/webhook'
   id:
     | '__root__'
     | '/'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/beta-lodges/$id'
     | '/listings/$id'
     | '/beta-lodges/'
+    | '/api/paystack/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   ListASpaceRoute: typeof ListASpaceRoute
   SafetyRoute: typeof SafetyRoute
   ListingsIdRoute: typeof ListingsIdRoute
+  ApiPaystackWebhookRoute: typeof ApiPaystackWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -340,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListingsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/paystack/webhook': {
+      id: '/api/paystack/webhook'
+      path: '/api/paystack/webhook'
+      fullPath: '/api/paystack/webhook'
+      preLoaderRoute: typeof ApiPaystackWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -384,6 +404,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListASpaceRoute: ListASpaceRoute,
   SafetyRoute: SafetyRoute,
   ListingsIdRoute: ListingsIdRoute,
+  ApiPaystackWebhookRoute: ApiPaystackWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
