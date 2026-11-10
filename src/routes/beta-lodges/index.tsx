@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertCircle, ArrowRight, BadgeCheck, Lock, RefreshCw, Sparkles, Video } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeCheck, Lock, RefreshCw, Video } from "lucide-react";
 
 import { BetaLodgeCard, BetaLodgeCardSkeleton } from "@/components/beta-lodge-card";
 import { BetaAccessBanner } from "@/components/beta-access-banner";
@@ -82,20 +82,12 @@ function BetaLodgesPage() {
       <SiteHeader />
 
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border/50 bg-gradient-to-br from-[#032b21] via-[#043327] to-[#064e3b] py-16 sm:py-20">
+      <section className="relative overflow-hidden border-b border-border/50 bg-gradient-to-br from-[#032b21] via-[#043327] to-[#064e3b] py-14 sm:py-18">
         {/* Ambient blobs */}
         <div className="pointer-events-none absolute -top-24 left-1/4 h-80 w-80 rounded-full bg-warning/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 right-1/4 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
 
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-          {/* Beta badge */}
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-warning/30 bg-warning/10 px-4 py-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-warning" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-warning">
-              Beta Programme
-            </span>
-          </div>
-
           <h1 className="font-display text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
             Beta Lodges
           </h1>

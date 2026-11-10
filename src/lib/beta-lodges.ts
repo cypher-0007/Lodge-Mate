@@ -125,6 +125,7 @@ export function useBetaLodgesConfig() {
   return useQuery({
     queryKey: ["beta-lodges-config"],
     queryFn: fetchBetaLodgesConfig,
+    placeholderData: FALLBACK_BETA_CONFIG,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true,
   });

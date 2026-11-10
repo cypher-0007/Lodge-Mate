@@ -236,3 +236,4 @@ test("Amount comparison: 1499 NGN < 1500 NGN snapshot fails", () => {
 console.log(`\n── Results ──────────────────────────────────────────────────────────────\n`);
 console.log(`  ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
+
