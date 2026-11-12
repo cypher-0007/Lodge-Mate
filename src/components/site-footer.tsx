@@ -21,6 +21,9 @@ export function SiteFooter() {
           <Link to="/how-it-works" className="hover:text-foreground">
             How it works
           </Link>
+          <Link to="/about" className="hover:text-foreground">
+            About
+          </Link>
           <Link to="/list-a-space" className="hover:text-foreground">
             List a space
           </Link>

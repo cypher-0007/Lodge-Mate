@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MapPin, Menu, Sparkles, X } from "lucide-react";
+import { MapPin, Menu, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
-const nav = [
-  { to: "/browse", label: "Browse", isSpecial: false },
-  { to: "/beta-lodges", label: "Beta Lodges", isSpecial: true },
-  { to: "/how-it-works", label: "How it works", isSpecial: false },
-  { to: "/list-a-space", label: "List a space", isSpecial: false },
+const mainNavLinks = [
+  { to: "/", label: "Home", exact: true },
+  { to: "/browse", label: "Browse", exact: false },
+  { to: "/beta-lodges", label: "Beta Lodges", exact: false },
+  { to: "/how-it-works", label: "How it works", exact: false },
+  { to: "/about", label: "About", exact: false },
+  { to: "/faq", label: "FAQ", exact: false },
 ] as const;
 
 export function SiteHeader() {
@@ -70,18 +72,26 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        {/* Desktop Navigation (Clean text links, no badge pill) */}
-        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          {nav.map((n) => (
+        {/* Desktop Navigation */}
+        <nav className="hidden items-center gap-4 lg:gap-6 text-sm text-muted-foreground md:flex">
+          {mainNavLinks.map((n) => (
             <Link
               key={n.to}
               to={n.to}
+              activeOptions={{ exact: n.exact }}
               className="transition-colors hover:text-foreground"
               activeProps={{ className: "text-foreground font-semibold" }}
             >
               {n.label}
             </Link>
           ))}
+          <Link
+            to="/list-a-space"
+            className="inline-flex items-center rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 hover:border-primary/40"
+            activeProps={{ className: "border-primary bg-primary/20 font-bold text-primary" }}
+          >
+            List a space
+          </Link>
         </nav>
 
         {/* Header Actions (Desktop) & Mobile Hamburger Toggle */}
@@ -129,14 +139,18 @@ export function SiteHeader() {
             >
               {/* Drawer Header with Title and Close Button */}
               <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/70 px-5">
-                <div className="flex items-center gap-2">
+                <Link
+                  to="/"
+                  className="flex items-center gap-2"
+                  onClick={() => setDrawerOpen(false)}
+                >
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-canopy text-primary-foreground shadow-xs">
                     <MapPin className="h-3.5 w-3.5" />
                   </span>
                   <span className="font-display text-base font-bold tracking-tight text-foreground">
                     LodgeMate
                   </span>
-                </div>
+                </Link>
 
                 <button
                   ref={closeButtonRef}
@@ -152,36 +166,35 @@ export function SiteHeader() {
               {/* Scrollable Navigation Body */}
               <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
                 {/* Main Links */}
-                <nav className="flex flex-col gap-1.5" aria-label="Mobile menu links">
-                  {nav.map((n) =>
-                    n.isSpecial ? (
-                      <Link
-                        key={n.to}
-                        to={n.to}
-                        onClick={() => setDrawerOpen(false)}
-                        className="flex items-center justify-between rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-warning/15"
-                        activeProps={{ className: "border-warning bg-warning/20 font-bold" }}
-                      >
-                        <span className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-warning" />
-                          {n.label}
-                        </span>
-                        <span className="rounded-full border border-warning/50 bg-warning/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-warning-foreground">
-                          BETA
-                        </span>
-                      </Link>
-                    ) : (
-                      <Link
-                        key={n.to}
-                        to={n.to}
-                        onClick={() => setDrawerOpen(false)}
-                        className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        activeProps={{ className: "bg-muted font-semibold text-foreground" }}
-                      >
-                        {n.label}
-                      </Link>
-                    ),
-                  )}
+                <nav className="flex flex-col gap-1" aria-label="Mobile menu links">
+                  {mainNavLinks.map((n) => (
+                    <Link
+                      key={n.to}
+                      to={n.to}
+                      activeOptions={{ exact: n.exact }}
+                      onClick={() => setDrawerOpen(false)}
+                      className={cn(
+                        "rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                        n.to === "/beta-lodges" && "text-foreground font-semibold"
+                      )}
+                      activeProps={{ className: "bg-muted font-semibold text-foreground" }}
+                    >
+                      {n.label}
+                    </Link>
+                  ))}
+
+                  {/* Prominent List a space CTA in mobile drawer */}
+                  <Link
+                    to="/list-a-space"
+                    onClick={() => setDrawerOpen(false)}
+                    className="mt-2 flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                    activeProps={{ className: "border-primary bg-primary/20 font-bold" }}
+                  >
+                    <span>List a space</span>
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                      Host
+                    </span>
+                  </Link>
                 </nav>
 
                 {/* Authentication Actions */}

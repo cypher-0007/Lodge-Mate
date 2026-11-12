@@ -270,13 +270,13 @@ export function Auth() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
-      <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-gradient-to-br from-[#032b21] via-[#064e3b] to-[#043327] px-4 py-12 sm:px-6 sm:py-16">
+      <main className="relative flex flex-1 items-center justify-center overflow-x-hidden bg-gradient-to-br from-[#032b21] via-[#064e3b] to-[#043327] px-3.5 py-10 sm:px-6 sm:py-16">
         {/* Ambient atmospheric glows */}
         <div className="pointer-events-none absolute -left-40 -top-40 h-96 w-96 rounded-full bg-leaf/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-warning/15 blur-3xl" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
 
-        <div className="relative mx-auto grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+        <div className="relative mx-auto grid w-full max-w-5xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 min-w-0">
           {/* Left Context Column (Visible on Desktop) */}
           <div className="hidden flex-col justify-center text-white lg:flex">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-semibold backdrop-blur-md">
@@ -330,7 +330,7 @@ export function Auth() {
           </div>
 
           {/* Right Card Column: The Auth Card */}
-          <div className="mx-auto w-full max-w-md rounded-2xl border border-border/80 bg-card p-6 shadow-2xl sm:p-8">
+          <div className="mx-auto w-full max-w-md min-w-0 rounded-2xl border border-border/80 bg-card p-5 sm:p-8 shadow-2xl box-border">
           {/* Header */}
           <div className="text-center sm:text-left">
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -344,8 +344,8 @@ export function Auth() {
           </div>
 
           {/* Persistent Account Type Indicator Banner */}
-          <div className="mt-5 flex items-center justify-between rounded-xl border border-border/80 bg-secondary/50 p-3">
-            <div className="flex items-center gap-2.5">
+          <div className="mt-5 flex items-center justify-between rounded-xl border border-border/80 bg-secondary/50 p-3 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 {role === "student" ? (
                   <GraduationCap className="h-5 w-5" />
@@ -355,11 +355,11 @@ export function Auth() {
                   <Building2 className="h-5 w-5" />
                 )}
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   Signing in as
                 </span>
-                <p className="text-xs font-semibold text-foreground sm:text-sm">
+                <p className="text-xs font-semibold text-foreground sm:text-sm truncate">
                   {role === "student"
                     ? "Student"
                     : providerType === "agent"
@@ -379,7 +379,7 @@ export function Auth() {
                   role === "student" ? "landlord" : "landlord",
                 )
               }
-              className="h-8 gap-1 rounded-lg text-xs font-semibold"
+              className="h-8 shrink-0 gap-1 rounded-lg text-xs font-semibold"
             >
               <RotateCcw className="h-3 w-3" />
               Switch
@@ -387,7 +387,7 @@ export function Auth() {
           </div>
 
           {/* Mode Switcher Tabs */}
-          <div className="mt-5 grid grid-cols-2 rounded-xl border border-border/80 bg-muted/60 p-1">
+          <div className="mt-5 grid grid-cols-2 rounded-xl border border-border/80 bg-muted/60 p-1 min-w-0">
             <button
               type="button"
               onClick={() => {
@@ -432,7 +432,7 @@ export function Auth() {
           {errorMessage && (
             <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+              <span className="break-words min-w-0">{errorMessage}</span>
             </div>
           )}
 
@@ -444,30 +444,30 @@ export function Auth() {
                 {/* Account Category selection (Student vs Landlord/Agent) */}
                 <div>
                   <Label className="text-xs font-semibold text-foreground">Select Pathway</Label>
-                  <div className="mt-1.5 grid grid-cols-2 gap-2">
+                  <div className="mt-1.5 grid grid-cols-1 min-[360px]:grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => openConfirmationModal("student")}
-                      className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
+                      className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all min-w-0 ${
                         role === "student"
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border/80 bg-card text-muted-foreground hover:border-primary/40"
                       }`}
                     >
-                      <GraduationCap className="h-4 w-4" />
-                      Student
+                      <GraduationCap className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Student</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => openConfirmationModal("landlord", providerType)}
-                      className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
+                      className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all min-w-0 ${
                         role === "landlord"
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border/80 bg-card text-muted-foreground hover:border-primary/40"
                       }`}
                     >
-                      <Building2 className="h-4 w-4" />
-                      Landlord / Agent
+                      <Building2 className="h-4 w-4 shrink-0" />
+                      <span className="truncate">Landlord / Agent</span>
                     </button>
                   </div>
                 </div>
@@ -478,7 +478,7 @@ export function Auth() {
                     <Label className="text-xs font-semibold text-foreground">
                       Provider Category
                     </Label>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="mt-2 grid grid-cols-1 min-[390px]:grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -487,17 +487,17 @@ export function Auth() {
                             window.localStorage.setItem(PROVIDER_STORAGE_KEY, "landlord");
                           }
                         }}
-                        className={`flex flex-col items-start rounded-lg border p-2 text-left text-xs transition-all ${
+                        className={`flex flex-col items-start rounded-lg border p-2.5 text-left text-xs transition-all min-w-0 ${
                           providerType === "landlord"
                             ? "border-primary bg-card text-foreground shadow-xs font-semibold"
                             : "border-border/60 text-muted-foreground hover:bg-card/60"
                         }`}
                       >
                         <span className="flex items-center gap-1.5">
-                          <Building2 className="h-3.5 w-3.5 text-primary" />
+                          <Building2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                           Landlord
                         </span>
-                        <span className="mt-0.5 text-[10px] text-muted-foreground font-normal">
+                        <span className="mt-0.5 text-[10px] text-muted-foreground font-normal leading-tight">
                           Property Owner / Caretaker
                         </span>
                       </button>
@@ -510,17 +510,17 @@ export function Auth() {
                             window.localStorage.setItem(PROVIDER_STORAGE_KEY, "agent");
                           }
                         }}
-                        className={`flex flex-col items-start rounded-lg border p-2 text-left text-xs transition-all ${
+                        className={`flex flex-col items-start rounded-lg border p-2.5 text-left text-xs transition-all min-w-0 ${
                           providerType === "agent"
                             ? "border-primary bg-card text-foreground shadow-xs font-semibold"
                             : "border-border/60 text-muted-foreground hover:bg-card/60"
                         }`}
                       >
                         <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-3.5 w-3.5 text-primary" />
+                          <Briefcase className="h-3.5 w-3.5 shrink-0 text-primary" />
                           Independent Agent
                         </span>
-                        <span className="mt-0.5 text-[10px] text-muted-foreground font-normal">
+                        <span className="mt-0.5 text-[10px] text-muted-foreground font-normal leading-tight">
                           Lodge &amp; Housing Representative
                         </span>
                       </button>
@@ -648,29 +648,30 @@ export function Auth() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-11 text-sm font-semibold rounded-xl"
-              size="lg"
+              className="w-full h-auto min-h-11 py-2.5 px-4 text-sm font-semibold rounded-xl whitespace-normal leading-snug"
               disabled={busy || !supabaseConfigured || (!passwordsMatch && mode === "signup")}
             >
-              {busy ? (
-                "Please wait…"
-              ) : mode === "signin" ? (
-                `Sign in as ${
-                  role === "student"
-                    ? "Student"
-                    : providerType === "agent"
-                      ? "Agent"
-                      : "Landlord"
-                }`
-              ) : (
-                `Create ${
-                  role === "student"
-                    ? "Student"
-                    : providerType === "agent"
-                      ? "Agent"
-                      : "Landlord"
-                } Account`
-              )}
+              <span className="truncate">
+                {busy ? (
+                  "Please wait…"
+                ) : mode === "signin" ? (
+                  `Sign in as ${
+                    role === "student"
+                      ? "Student"
+                      : providerType === "agent"
+                        ? "Agent"
+                        : "Landlord"
+                  }`
+                ) : (
+                  `Create ${
+                    role === "student"
+                      ? "Student"
+                      : providerType === "agent"
+                        ? "Agent"
+                        : "Landlord"
+                  } Account`
+                )}
+              </span>
             </Button>
           </form>
 
@@ -684,12 +685,11 @@ export function Auth() {
           {/* Google OAuth Button */}
           <Button
             variant="outline"
-            className="w-full h-11 gap-2 rounded-xl text-xs font-semibold hover:bg-muted/60"
-            size="lg"
+            className="w-full h-auto min-h-11 py-2.5 px-3 gap-2 rounded-xl text-xs font-semibold hover:bg-muted/60 whitespace-normal leading-snug text-center justify-center"
             onClick={google}
             disabled={!supabaseConfigured || busy}
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -707,7 +707,9 @@ export function Auth() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            Continue with Google ({role === "student" ? "Student" : "Landlord/Agent"})
+            <span className="truncate">
+              Continue with Google ({role === "student" ? "Student" : "Landlord/Agent"})
+            </span>
           </Button>
 
           {/* Bottom Switcher */}
@@ -784,7 +786,7 @@ export function Auth() {
           {pendingRole === "landlord" && (
             <div className="my-2 space-y-2 rounded-xl border border-border/70 bg-muted/40 p-3">
               <span className="text-xs font-semibold text-foreground">Specify your role:</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setPendingProvider("landlord")}
