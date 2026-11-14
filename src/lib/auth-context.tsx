@@ -14,6 +14,11 @@ type Profile = {
   school: string | null;
   provider_type: ProviderType | null;
   banned: boolean;
+  avatar_url?: string | null;
+  business_name?: string | null;
+  operating_area?: string | null;
+  bio?: string | null;
+  verified?: boolean;
 };
 
 type AuthValue = {
