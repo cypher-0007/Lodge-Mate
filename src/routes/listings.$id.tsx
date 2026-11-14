@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -72,6 +73,13 @@ export const Route = createFileRoute("/listings/$id")({
   component: ListingDetail,
 });
 
+const TIME_SLOTS = [
+  { value: "morning", label: "Morning (9:00 AM – 12:00 PM)" },
+  { value: "afternoon", label: "Afternoon (12:00 PM – 3:00 PM)" },
+  { value: "evening", label: "Late Afternoon / Evening (3:00 PM – 6:00 PM)" },
+  { value: "flexible", label: "Flexible (Any time host is available)" },
+];
+
 function ListingDetail() {
   const { listing: l } = Route.useLoaderData();
   const { user, isStudent } = useAuth();
@@ -84,6 +92,7 @@ function ListingDetail() {
   // Inspection Request Modal State
   const [isInspectionOpen, setIsInspectionOpen] = useState(false);
   const [preferredDate, setPreferredDate] = useState("");
+  const [preferredTimeSlot, setPreferredTimeSlot] = useState("afternoon");
   const [inspectionNote, setInspectionNote] = useState("");
   const [isSubmittingInspection, setIsSubmittingInspection] = useState(false);
 
@@ -123,11 +132,16 @@ function ListingDetail() {
 
     setIsSubmittingInspection(true);
     try {
+      const slotLabel = TIME_SLOTS.find((s) => s.value === preferredTimeSlot)?.label ?? preferredTimeSlot;
+      const combinedNote = inspectionNote.trim()
+        ? `Time window: ${slotLabel}\nNote: ${inspectionNote.trim()}`
+        : `Time window: ${slotLabel}`;
+
       const { error } = await supabase.from("inspections").insert({
         listing_id: l.id,
         student_id: user.id,
         preferred_date: preferredDate || null,
-        note: inspectionNote || null,
+        note: combinedNote,
       });
 
       if (error) throw error;
@@ -137,6 +151,7 @@ function ListingDetail() {
       });
       setIsInspectionOpen(false);
       setPreferredDate("");
+      setPreferredTimeSlot("afternoon");
       setInspectionNote("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to book inspection");
@@ -364,19 +379,39 @@ function ListingDetail() {
           </DialogHeader>
 
           <form onSubmit={handleInspectionSubmit} className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="prefDate" className="text-xs font-semibold">
-                Preferred Date
-              </Label>
-              <Input
-                id="prefDate"
-                type="date"
-                min={new Date().toISOString().split("T")[0]}
-                className="mt-1.5 text-sm"
-                value={preferredDate}
-                onChange={(e) => setPreferredDate(e.target.value)}
-                required
-              />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="prefDate" className="text-xs font-semibold">
+                  Preferred Date <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="prefDate"
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
+                  className="mt-1.5 text-xs sm:text-sm"
+                  value={preferredDate}
+                  onChange={(e) => setPreferredDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="prefTimeSlot" className="text-xs font-semibold">
+                  Time Window
+                </Label>
+                <Select value={preferredTimeSlot} onValueChange={setPreferredTimeSlot}>
+                  <SelectTrigger id="prefTimeSlot" className="mt-1.5 text-xs sm:text-sm">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((s) => (
+                      <SelectItem key={s.value} value={s.value} className="text-xs">
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>

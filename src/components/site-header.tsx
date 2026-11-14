@@ -324,6 +324,16 @@ function HeaderActions({
           )}
 
           <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start h-9 rounded-xl"
+            asChild
+            onClick={onAction}
+          >
+            <Link to="/profile">Profile & Settings</Link>
+          </Button>
+
+          <Button
             size="sm"
             variant="ghost"
             className="w-full justify-start h-9 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -358,6 +368,10 @@ function HeaderActions({
           <Link to="/dashboard">Dashboard</Link>
         </Button>
       )}
+
+      <Button variant="ghost" size="sm" asChild onClick={onAction}>
+        <Link to="/profile">Profile</Link>
+      </Button>
 
       <Button size="sm" variant="outline" onClick={handleSignOut}>
         Sign out

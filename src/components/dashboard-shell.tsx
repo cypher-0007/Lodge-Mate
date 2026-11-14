@@ -14,11 +14,12 @@ export function DashboardShell({
   subtitle: string;
   children: ReactNode;
 }) {
-  const { isAdmin, isHost, profile } = useAuth();
+  const { isAdmin, isHost, isStudent, profile } = useAuth();
 
   const tabs = [
-    { to: "/dashboard", label: "My dashboard", show: true },
+    { to: "/dashboard", label: "My dashboard", show: isStudent || isAdmin },
     { to: "/host", label: "Host panel", show: isHost },
+    { to: "/profile", label: "Profile & Settings", show: true },
     { to: "/admin", label: "Admin", show: isAdmin },
   ] as const;
 
