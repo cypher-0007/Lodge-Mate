@@ -8,10 +8,13 @@ import { useAuth } from "@/lib/auth-context";
 export function DashboardShell({
   title,
   subtitle,
+  badge,
   children,
 }: {
   title: string;
   subtitle: string;
+  /** Optional role / context badge displayed beneath the subtitle. */
+  badge?: string;
   children: ReactNode;
 }) {
   const { isAdmin, isHost, isStudent, profile } = useAuth();
@@ -31,6 +34,11 @@ export function DashboardShell({
           <div className="mx-auto max-w-6xl px-5 py-9">
             <h1 className="font-display text-3xl font-bold tracking-tight">{title}</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
+            {badge && (
+              <span className="mt-2 inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                {badge}
+              </span>
+            )}
             {profile?.banned && (
               <p className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 Your account has been suspended. Contact support to appeal.

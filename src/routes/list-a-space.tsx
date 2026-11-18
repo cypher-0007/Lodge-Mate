@@ -3,6 +3,7 @@ import { BedDouble, Building2, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ListingImageUpload, uploadListingPhotos, type ImageFileItem } from "@/components/listing-image-upload";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ function ListASpace() {
   const [period, setPeriod] = useState("per year");
   const [amenities, setAmenities] = useState("");
   const [description, setDescription] = useState("");
+  const [images, setImages] = useState<ImageFileItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,6 +85,19 @@ function ListASpace() {
         .map((a) => a.trim())
         .filter(Boolean);
 
+      // Upload primary listing photo if provided
+      let image_url: string | null = null;
+      if (images.length > 0) {
+        const { primaryUrl, error: uploadErr } = await uploadListingPhotos(images, user.id);
+        if (uploadErr) {
+          toast.warning("Photo upload failed", {
+            description: `Your listing will be saved without a photo. Reason: ${uploadErr}`,
+          });
+        } else {
+          image_url = primaryUrl;
+        }
+      }
+
       const { error } = await supabase.from("listings").insert({
         owner_id: user.id,
         title: title.trim(),
@@ -95,6 +110,7 @@ function ListASpace() {
         description: description.trim(),
         status: "pending",
         verified: false,
+        ...(image_url ? { image_url } : {}),
       });
 
       if (error) throw error;
@@ -239,6 +255,15 @@ function ListASpace() {
                   required
                 />
               </div>
+            </div>
+
+            {/* Photo upload */}
+            <div>
+              <Label className="mb-2 block text-sm font-semibold">Photos (optional)</Label>
+              <ListingImageUpload images={images} onChange={setImages} maxFiles={5} />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Add up to 5 photos. The first becomes the cover photo. JPG, PNG or WebP · max 5MB each.
+              </p>
             </div>
 
             <div className="rounded-2xl border border-border bg-muted/60 p-5 text-sm text-muted-foreground">

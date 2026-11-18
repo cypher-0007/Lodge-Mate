@@ -7,7 +7,7 @@ export type AppRole = "student" | "landlord" | "admin";
 
 export type ProviderType = "landlord" | "agent";
 
-type Profile = {
+export type Profile = {
   id: string;
   full_name: string | null;
   phone: string | null;
@@ -71,16 +71,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const [{ data: p }, { data: r }] = await Promise.all([
-      supabase
+    let profileData: Profile | null = null;
+    try {
+      const { data: fullProfile, error: fullProfileErr } = await supabase
         .from("profiles")
-        .select("id, full_name, phone, school, provider_type, banned")
+        .select("id, full_name, phone, school, provider_type, banned, avatar_url, business_name, operating_area, bio, verified")
         .eq("id", userId)
-        .maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-    ]);
-    setProfile((p as Profile) ?? null);
-    setRoles(((r ?? []) as { role: AppRole }[]).map((row) => row.role));
+        .maybeSingle();
+
+      if (!fullProfileErr && fullProfile) {
+        profileData = fullProfile as unknown as Profile;
+      } else if (fullProfileErr) {
+        // Fallback to core columns if extended profile columns are not yet provisioned remotely
+        const { data: baseProfile } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone, school, provider_type, banned")
+          .eq("id", userId)
+          .maybeSingle();
+        profileData = (baseProfile as Profile) ?? null;
+      }
+    } catch (err) {
+      console.warn("Failed to retrieve profile data:", err);
+    }
+
+    let userRoles: AppRole[] = [];
+    try {
+      const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+      userRoles = ((r ?? []) as { role: AppRole }[]).map((row) => row.role);
+    } catch (err) {
+      console.warn("Failed to retrieve user roles:", err);
+    }
+
+    setProfile(profileData);
+    setRoles(userRoles);
   };
 
   useEffect(() => {

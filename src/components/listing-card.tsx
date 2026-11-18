@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronRight, Heart, MapPin, ShieldAlert } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
-import type { Listing } from "@/lib/listings";
+import { getFallbackImage, type Listing } from "@/lib/listings";
 import { useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
 
 export function ListingCard({ listing: l }: { listing: Listing }) {
@@ -23,11 +23,17 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
       <Link to="/listings/$id" params={{ id: l.id }} className="relative block overflow-hidden">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <img
-            src={l.image}
+            src={l.image || getFallbackImage(l.kind)}
             alt={l.title}
             loading="lazy"
             width={1024}
             height={768}
+            onError={(e) => {
+              const fallback = getFallbackImage(l.kind);
+              if (e.currentTarget.src !== fallback) {
+                e.currentTarget.src = fallback;
+              }
+            }}
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-60" />

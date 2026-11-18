@@ -32,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { fetchListingById, isLocalDevPreview } from "@/lib/listings";
+import { fetchListingById, getFallbackImage, isLocalDevPreview } from "@/lib/listings";
 import { useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
 
 export const Route = createFileRoute("/listings/$id")({
@@ -222,10 +222,16 @@ function ListingDetail() {
           <div>
             <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-card">
               <img
-                src={l.image}
+                src={l.image || getFallbackImage(l.kind)}
                 alt={l.title}
                 width={1024}
                 height={768}
+                onError={(e) => {
+                  const fallback = getFallbackImage(l.kind);
+                  if (e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                  }
+                }}
                 className="aspect-[16/10] w-full object-cover"
               />
 

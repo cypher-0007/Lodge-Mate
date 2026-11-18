@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
+  ArrowLeft,
   BadgeCheck,
   Briefcase,
   Building2,
@@ -9,6 +10,8 @@ import {
   Eye,
   EyeOff,
   GraduationCap,
+  KeyRound,
+  Mail,
   RotateCcw,
   ShieldCheck,
   Sparkles,
@@ -82,20 +85,56 @@ export function Auth() {
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Forgot Password Dialog State
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  // Recovery / Update Password State
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const supabaseConfigured = isSupabaseConfigured();
 
-  // Load persisted role preference on mount
+  // Load persisted role preference and check for recovery mode on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedRole = window.localStorage.getItem(ROLE_STORAGE_KEY) as Role | null;
-      const savedProvider = window.localStorage.getItem(PROVIDER_STORAGE_KEY) as ProviderType | null;
-      if (savedRole === "student" || savedRole === "landlord") {
-        setRole(savedRole);
-      }
-      if (savedProvider === "landlord" || savedProvider === "agent") {
-        setProviderType(savedProvider);
-      }
+    if (typeof window === "undefined") return;
+
+    const savedRole = window.localStorage.getItem(ROLE_STORAGE_KEY) as Role | null;
+    const savedProvider = window.localStorage.getItem(PROVIDER_STORAGE_KEY) as ProviderType | null;
+    if (savedRole === "student" || savedRole === "landlord") {
+      setRole(savedRole);
     }
+    if (savedProvider === "landlord" || savedProvider === "agent") {
+      setProviderType(savedProvider);
+    }
+
+    // Check if user navigated here with recovery tokens or query parameters
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    if (
+      searchParams.get("mode") === "update-password" ||
+      searchParams.get("type") === "recovery" ||
+      hashParams.get("type") === "recovery"
+    ) {
+      setIsRecoveryMode(true);
+    }
+
+    // Listen for Supabase PASSWORD_RECOVERY event
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryMode(true);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,6 +303,85 @@ export function Auth() {
     if (error) toast.error(error.message || "Google sign-in failed");
   };
 
+  const handleSendPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabaseConfigured) {
+      toast.error("Account access is not configured yet. Add your Supabase values to .env.");
+      return;
+    }
+
+    if (!forgotEmail.trim() || !forgotEmail.includes("@")) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    setIsSendingReset(true);
+    try {
+      const redirectUrl = `${window.location.origin}/auth?mode=update-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        console.warn("Password reset error:", error.message);
+      }
+
+      // Security best practice: Do not reveal whether an email address is registered
+      setResetSent(true);
+      toast.success("Password reset email sent", {
+        description: "If an account exists with this email address, you will receive password reset instructions shortly.",
+      });
+    } catch {
+      toast.error("Unable to send reset instructions. Please try again later.");
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabaseConfigured) {
+      toast.error("Account access is not configured yet.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match. Please check and try again.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      toast.success("Password updated successfully!", {
+        description: "Your password has been changed. You are now logged in.",
+      });
+
+      setIsRecoveryMode(false);
+      setNewPassword("");
+      setConfirmNewPassword("");
+      if (typeof window !== "undefined" && window.history?.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      afterAuth();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update password";
+      toast.error(msg);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   const passwordsMatch =
     mode === "signin" || !form.confirmPassword || form.password === form.confirmPassword;
 
@@ -331,6 +449,101 @@ export function Auth() {
 
           {/* Right Card Column: The Auth Card */}
           <div className="mx-auto w-full max-w-md min-w-0 rounded-2xl border border-border/80 bg-card p-5 sm:p-8 shadow-2xl box-border">
+          {isRecoveryMode ? (
+            <div className="space-y-5">
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 mb-3">
+                  <KeyRound className="h-5 w-5" />
+                </div>
+                <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  Set new password
+                </h1>
+                <p className="mt-1.5 text-xs text-muted-foreground sm:text-sm">
+                  Choose a new password for your LodgeMate account (at least 6 characters).
+                </p>
+              </div>
+
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div>
+                  <Label htmlFor="newPassword" className="text-xs font-medium">
+                    New Password
+                  </Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      className="pr-10 text-sm"
+                      placeholder="At least 6 characters"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="confirmNewPassword" className="text-xs font-medium">
+                    Confirm New Password
+                  </Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="confirmNewPassword"
+                      type={showConfirmNewPassword ? "text" : "password"}
+                      className="pr-10 text-sm"
+                      placeholder="Re-enter your new password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showConfirmNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmNewPassword && newPassword !== confirmNewPassword && (
+                    <p className="mt-1 text-[11px] text-destructive">Passwords do not match.</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isUpdatingPassword || newPassword.length < 6 || newPassword !== confirmNewPassword}
+                  className="w-full text-xs font-semibold sm:text-sm"
+                >
+                  {isUpdatingPassword ? "Saving password…" : "Save New Password"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsRecoveryMode(false);
+                    if (typeof window !== "undefined" && window.history?.replaceState) {
+                      window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                  }}
+                  className="w-full text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Return to sign in
+                </Button>
+              </form>
+            </div>
+          ) : (
+            <>
           {/* Header */}
           <div className="text-center sm:text-left">
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -582,9 +795,24 @@ export function Auth() {
 
             {/* Password */}
             <div>
-              <Label htmlFor="password" className="text-xs font-medium">
-                Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-xs font-medium">
+                  Password
+                </Label>
+                {mode === "signin" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail(form.email || "");
+                      setResetSent(false);
+                      setIsForgotPasswordOpen(true);
+                    }}
+                    className="text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:underline transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <div className="relative mt-1.5">
                 <Input
                   id="password"
@@ -733,6 +961,8 @@ export function Auth() {
               Browse listings without signing in
             </Link>
           </p>
+          </>
+        )}
         </div>
         </div>
       </main>
@@ -838,6 +1068,81 @@ export function Auth() {
                   : "Landlord"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+        <DialogContent className="max-w-md sm:rounded-2xl">
+          <DialogHeader>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 mb-2">
+              <Mail className="h-5 w-5" />
+            </div>
+            <DialogTitle className="text-base font-bold sm:text-lg">
+              Reset your password
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {resetSent
+                ? "Check your email for instructions to reset your password."
+                : "Enter your registered email address and we'll send you a secure link to choose a new password."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetSent ? (
+            <div className="space-y-4 py-2">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-950 dark:text-emerald-100 flex items-start gap-2.5">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                <p>
+                  If an account exists for <strong className="font-semibold text-foreground">{forgotEmail}</strong>, a password reset link has been sent. Please check your inbox and spam folder.
+                </p>
+              </div>
+
+              <DialogFooter className="mt-4">
+                <Button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(false)}
+                  className="w-full rounded-xl text-xs font-semibold"
+                >
+                  Done
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <form onSubmit={handleSendPasswordReset} className="space-y-4 py-2">
+              <div>
+                <Label htmlFor="forgotEmail" className="text-xs font-medium">
+                  Registered Email Address
+                </Label>
+                <Input
+                  id="forgotEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  className="mt-1.5 text-sm"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <DialogFooter className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsForgotPasswordOpen(false)}
+                  className="rounded-xl text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSendingReset}
+                  className="rounded-xl text-xs font-semibold"
+                >
+                  {isSendingReset ? "Sending link…" : "Send Reset Link"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 

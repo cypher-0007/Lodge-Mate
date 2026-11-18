@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Mail, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 import { SiteFooter } from "@/components/site-footer";
@@ -38,7 +38,6 @@ export const Route = createFileRoute("/contact")({
 
 const channels = [
   { icon: Mail, label: "Email", value: "hello@lodgemate.ng" },
-  { icon: Phone, label: "WhatsApp", value: "+234 800 000 0000" },
   { icon: MapPin, label: "Campus desks", value: "Ishiagu gate, MOUAU · Uturu main road, ABSU" },
   { icon: Clock, label: "Hours", value: "Mon–Sat, 9am – 6pm WAT" },
 ];
@@ -66,8 +65,9 @@ function Contact() {
               className="mt-6 space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                toast.success("Message queued", {
-                  description: "Connect Lovable Cloud to deliver messages to your inbox.",
+                toast.info("Direct messaging inbox pending configuration", {
+                  description:
+                    "Online contact message routing is not yet connected to a mailbox backend. Please email us directly at hello@lodgemate.ng for immediate assistance.",
                 });
               }}
             >
@@ -135,7 +135,7 @@ function Contact() {
             <div className="rounded-2xl border border-border bg-warm p-5">
               <p className="text-sm font-semibold">Urgent scam report?</p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                Use WhatsApp — reports about money already sent are handled first.
+                Email us with &ldquo;URGENT&rdquo; in the subject line — reports regarding suspicious hosts or requests for advance payment are prioritized immediately.
               </p>
             </div>
           </aside>
