@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { fetchListingById, getFallbackImage, isLocalDevPreview } from "@/lib/listings";
+import { getOrCreateConversation, saveMessageIntent } from "@/lib/messaging";
 import { useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
 
 export const Route = createFileRoute("/listings/$id")({
@@ -116,6 +117,56 @@ function ListingDetail() {
       return;
     }
     setIsInspectionOpen(true);
+  };
+
+  const isPeerBedspace = l.kind === "Bedspace" || l.kind === "Takeover";
+  const messageLabel = isPeerBedspace ? "Message Roommate / Host" : "Message Host";
+  const isOwnListing = user && l.ownerId && user.id === l.ownerId;
+
+  const handleMessageHostClick = async () => {
+    if (!user) {
+      saveMessageIntent({
+        intent: "message",
+        listingId: l.id,
+        recipientId: l.ownerId || "mock-provider-1",
+        recipientName: l.host.name,
+        recipientRole: isPeerBedspace
+          ? "student"
+          : l.host.role.toLowerCase().includes("agent")
+          ? "agent"
+          : "landlord",
+        returnTo: `/listings/${l.id}`,
+      });
+      toast.info("Please sign in to message this host", {
+        description: "Create a free account or sign in to start a direct in-app conversation.",
+      });
+      navigate({
+        to: "/auth",
+        search: {
+          intent: "message",
+          recipientName: encodeURIComponent(l.host.name),
+          returnTo: `/listings/${l.id}`,
+        },
+      });
+      return;
+    }
+
+    if (isOwnListing) {
+      toast.info("This is your own listing.", {
+        description: "You cannot initiate a conversation with yourself.",
+      });
+      return;
+    }
+
+    try {
+      const convId = await getOrCreateConversation(l.ownerId || "mock-provider-1", l.id);
+      navigate({
+        to: "/messages",
+        search: { conversation_id: convId },
+      });
+    } catch (err: any) {
+      toast.error(err?.message || "Unable to open conversation right now.");
+    }
   };
 
   const handleInspectionSubmit = async (e: React.FormEvent) => {
@@ -217,7 +268,7 @@ function ListingDetail() {
           </Link>
         </div>
 
-        <section className="mx-auto grid max-w-6xl gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[1.35fr_0.65fr]">
+        <section className="mx-auto grid max-w-6xl gap-8 px-4 py-6 pb-24 sm:px-6 sm:py-8 lg:pb-8 lg:grid-cols-[1.35fr_0.65fr]">
           {/* Main Listing Details */}
           <div>
             <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-card">
@@ -241,11 +292,10 @@ function ListingDetail() {
                   type="button"
                   onClick={() => toggleSave.mutate({ listingId: l.id, currentlySaved: isSaved })}
                   disabled={toggleSave.isPending}
-                  className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full shadow-md backdrop-blur-sm transition-transform active:scale-90 ${
-                    isSaved
-                      ? "bg-destructive text-white"
-                      : "bg-background/90 text-foreground hover:bg-background hover:text-destructive"
-                  }`}
+                  className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full shadow-md backdrop-blur-sm transition-transform active:scale-90 ${isSaved
+                    ? "bg-destructive text-white"
+                    : "bg-background/90 text-foreground hover:bg-background hover:text-destructive"
+                    }`}
                   title={isSaved ? "Saved" : "Save this lodge"}
                 >
                   <Heart className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`} />
@@ -334,16 +384,10 @@ function ListingDetail() {
                   variant="outline"
                   className="w-full h-11 gap-2 rounded-xl text-xs font-semibold"
                   size="lg"
-                  onClick={() => {
-                    if (!user) {
-                      toast.info("Please sign in to message hosts.");
-                      navigate({ to: "/auth" });
-                      return;
-                    }
-                    toast.info("Host messaging enabled upon inspection confirmation.");
-                  }}
+                  disabled={Boolean(isOwnListing)}
+                  onClick={handleMessageHostClick}
                 >
-                  <MessageCircle className="h-4 w-4" /> Message host
+                  <MessageCircle className="h-4 w-4" /> {isOwnListing ? "Your Listing" : messageLabel}
                 </Button>
               </div>
 
@@ -369,6 +413,40 @@ function ListingDetail() {
             </div>
           </aside>
         </section>
+
+        {/* Mobile Fixed Bottom Action Bar */}
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-background/95 backdrop-blur-sm p-3 pb-4 md:hidden shadow-lg">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground truncate">
+                {l.price} <span className="text-xs font-normal text-muted-foreground">/{l.period}</span>
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {l.kind} · {l.school}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 rounded-xl text-xs font-semibold"
+                disabled={Boolean(isOwnListing)}
+                onClick={handleMessageHostClick}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Message
+              </Button>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5 rounded-xl text-xs font-semibold bg-canopy text-primary-foreground shadow-xs"
+                onClick={handleBookInspectionClick}
+              >
+                <CalendarCheck className="h-3.5 w-3.5" />
+                Inspect
+              </Button>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Book Inspection Dialog */}

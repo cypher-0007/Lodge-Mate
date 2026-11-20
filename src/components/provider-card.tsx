@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Building2, MapPin, ShieldAlert, User } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, MapPin, MessageCircle, ShieldAlert, User } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ interface ProviderCardProps {
   activeListingsCount: number;
   operatingAreas?: string[];
   onViewListings?: () => void;
+  onMessage?: () => void;
 }
 
 export function ProviderCard({
@@ -25,6 +26,7 @@ export function ProviderCard({
   activeListingsCount,
   operatingAreas,
   onViewListings,
+  onMessage,
 }: ProviderCardProps) {
   const isAgent = p.providerType === "agent";
   const displayArea =
@@ -99,30 +101,44 @@ export function ProviderCard({
       </div>
 
       {/* Footer: Listed Properties & Action Button */}
-      <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 gap-2">
+        <span className="text-xs font-medium text-muted-foreground truncate">
           {activeListingsCount > 0 ? (
             <span className="text-foreground font-semibold">
-              {activeListingsCount} {activeListingsCount === 1 ? "Space Listed" : "Spaces Listed"}
+              {activeListingsCount} {activeListingsCount === 1 ? "Space" : "Spaces"} Listed
             </span>
           ) : (
-            "No spaces currently listed"
+            "No spaces listed"
           )}
         </span>
 
-        {activeListingsCount > 0 && onViewListings ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onViewListings}
-            className="h-8 gap-1 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary px-2.5"
-          >
-            <span>View spaces</span>
-            <ArrowRight className="h-3 w-3" />
-          </Button>
-        ) : (
-          <span className="text-[11px] text-muted-foreground italic">Contact via spaces</span>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onMessage && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onMessage}
+              className="h-8 gap-1 text-xs font-semibold px-2.5 rounded-lg"
+            >
+              <MessageCircle className="h-3 w-3" />
+              <span>Message</span>
+            </Button>
+          )}
+
+          {activeListingsCount > 0 && onViewListings ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onViewListings}
+              className="h-8 gap-1 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary px-2.5"
+            >
+              <span>View spaces</span>
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          ) : (
+            <span className="text-[11px] text-muted-foreground italic">Contact via spaces</span>
+          )}
+        </div>
       </div>
     </article>
   );

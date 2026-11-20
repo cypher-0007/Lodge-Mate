@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
   ArrowRight,
@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { ListingCard, ListingCardSkeleton } from "@/components/listing-card";
 import { ProviderCard } from "@/components/provider-card";
@@ -27,7 +28,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuth } from "@/lib/auth-context";
 import { isLocalDevPreview, useListingsQuery } from "@/lib/listings";
+import { getOrCreateConversation, saveMessageIntent } from "@/lib/messaging";
 import { type AccommodationProvider, useProvidersQuery } from "@/lib/providers";
 
 export const Route = createFileRoute("/browse")({
@@ -353,6 +356,50 @@ function Browse() {
     setSelectedHostFilter({ id: provider.id, name: provider.fullName });
     setQuery("");
     window.scrollTo({ top: 380, behavior: "smooth" });
+  };
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleMessageProvider = async (provider: AccommodationProvider) => {
+    if (!user) {
+      saveMessageIntent({
+        intent: "message",
+        recipientId: provider.id,
+        recipientName: provider.fullName,
+        recipientRole: provider.providerType === "agent" ? "agent" : "landlord",
+        returnTo: "/browse",
+      });
+      toast.info("Please sign in to message this provider", {
+        description: "Create a free account or sign in to start a direct in-app conversation.",
+      });
+      navigate({
+        to: "/auth",
+        search: {
+          intent: "message",
+          recipientName: encodeURIComponent(provider.fullName),
+          returnTo: "/browse",
+        },
+      });
+      return;
+    }
+
+    if (user.id === provider.id) {
+      toast.info("This is your own profile.", {
+        description: "You cannot initiate a conversation with yourself.",
+      });
+      return;
+    }
+
+    try {
+      const convId = await getOrCreateConversation(provider.id, null);
+      navigate({
+        to: "/messages",
+        search: { conversation_id: convId },
+      });
+    } catch (err: any) {
+      toast.error(err?.message || "Unable to start conversation right now.");
+    }
   };
 
   return (
@@ -1186,6 +1233,7 @@ function Browse() {
                         activeListingsCount={activeCount}
                         operatingAreas={operatingAreas}
                         onViewListings={() => handleViewProviderSpaces(p)}
+                        onMessage={() => handleMessageProvider(p)}
                       />
                     );
                   })}

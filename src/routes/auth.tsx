@@ -12,6 +12,7 @@ import {
   GraduationCap,
   KeyRound,
   Mail,
+  MessageCircle,
   RotateCcw,
   ShieldCheck,
   Sparkles,
@@ -34,8 +35,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
+import { consumeMessageIntent, getSafeReturnUrl } from "@/lib/messaging";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (
+    search: Record<string, unknown>
+  ): {
+    returnTo?: string | undefined;
+    intent?: string | undefined;
+    recipientName?: string | undefined;
+    mode?: string | undefined;
+    type?: string | undefined;
+  } => ({
+    returnTo: typeof search["returnTo"] === "string" ? search["returnTo"] : undefined,
+    intent: typeof search["intent"] === "string" ? search["intent"] : undefined,
+    recipientName: typeof search["recipientName"] === "string" ? search["recipientName"] : undefined,
+    mode: typeof search["mode"] === "string" ? search["mode"] : undefined,
+    type: typeof search["type"] === "string" ? search["type"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Sign In or Create an Account — LodgeMate" },
@@ -62,9 +79,15 @@ const PROVIDER_STORAGE_KEY = "lodgemate_selected_provider";
 
 export function Auth() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(
+    search.intent === "message" ? "signup" : "signin"
+  );
   const [role, setRole] = useState<Role>("student");
   const [providerType, setProviderType] = useState<ProviderType>("landlord");
+
+  // Messaging Intent Banner State
+  const [messageIntentBanner, setMessageIntentBanner] = useState<string | null>(null);
 
   // Account Type Selection Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -125,6 +148,20 @@ export function Auth() {
       setIsRecoveryMode(true);
     }
 
+    // Check for message intent in URL params
+    const intentParam = searchParams.get("intent") ?? search.intent;
+    const recipientParam = searchParams.get("recipientName") ?? search.recipientName;
+    if (intentParam === "message") {
+      setMessageIntentBanner(recipientParam ? decodeURIComponent(recipientParam) : "the host");
+    }
+
+    // Restore intent from backup if returning from OAuth
+    const intentBackup = window.localStorage.getItem("lodgemate_auth_intent_backup");
+    if (intentBackup && !window.sessionStorage.getItem("lodgemate_auth_intent")) {
+      window.sessionStorage.setItem("lodgemate_auth_intent", intentBackup);
+      window.localStorage.removeItem("lodgemate_auth_intent_backup");
+    }
+
     // Listen for Supabase PASSWORD_RECOVERY event
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
@@ -173,6 +210,22 @@ export function Auth() {
   };
 
   const afterAuth = () => {
+    // 1. Check for stored message intent
+    const intent = consumeMessageIntent();
+    if (intent) {
+      const destination = getSafeReturnUrl(intent.returnTo);
+      navigate({ to: destination });
+      return;
+    }
+
+    // 2. Check for returnTo search param
+    if (search.returnTo) {
+      const destination = getSafeReturnUrl(search.returnTo);
+      navigate({ to: destination });
+      return;
+    }
+
+    // 3. Role-based fallback
     if (role === "landlord") {
       navigate({ to: "/host" });
     } else {
@@ -294,6 +347,10 @@ export function Auth() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lodgemate_pending_role", role);
       window.localStorage.setItem("lodgemate_pending_provider", providerType);
+      const intentRaw = window.sessionStorage.getItem("lodgemate_auth_intent");
+      if (intentRaw) {
+        window.localStorage.setItem("lodgemate_auth_intent_backup", intentRaw);
+      }
     }
 
     const { error } = await supabase.auth.signInWithOAuth({
@@ -638,6 +695,19 @@ export function Auth() {
             >
               Authentication is in demo mode. Connect Supabase in your environment to test live account
               creation.
+            </div>
+          )}
+
+          {/* Messaging Intent Banner */}
+          {messageIntentBanner && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-foreground">
+              <MessageCircle className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">Join LodgeMate to start a conversation</p>
+                <p className="mt-0.5 text-muted-foreground leading-relaxed">
+                  Create your free account to message {messageIntentBanner} and fellow students about accommodation near MOUAU and ABSU.
+                </p>
+              </div>
             </div>
           )}
 

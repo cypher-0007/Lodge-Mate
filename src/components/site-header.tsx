@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MapPin, Menu, X } from "lucide-react";
+import { MapPin, Menu, MessageCircle, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import { useUnreadCountQuery } from "@/lib/messaging";
 import { cn } from "@/lib/utils";
 
 const mainNavLinks = [
@@ -226,6 +227,7 @@ function HeaderActions({
   isMobile?: boolean;
 }) {
   const { user, isHost, isAdmin, isStudent, providerType, signOut } = useAuth();
+  const { data: unreadCount = 0 } = useUnreadCountQuery(user?.id);
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -326,6 +328,24 @@ function HeaderActions({
           <Button
             variant="outline"
             size="sm"
+            className="w-full justify-start h-9 rounded-xl relative"
+            asChild
+            onClick={onAction}
+          >
+            <Link to="/messages">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Messages
+              {(unreadCount ?? 0) > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             className="w-full justify-start h-9 rounded-xl"
             asChild
             onClick={onAction}
@@ -368,6 +388,18 @@ function HeaderActions({
           <Link to="/dashboard">Dashboard</Link>
         </Button>
       )}
+
+      <Button variant="ghost" size="sm" asChild onClick={onAction} className="relative">
+        <Link to="/messages">
+          <MessageCircle className="mr-1.5 h-4 w-4" />
+          Messages
+          {(unreadCount ?? 0) > 0 && (
+            <span className="ml-1.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </Link>
+      </Button>
 
       <Button variant="ghost" size="sm" asChild onClick={onAction}>
         <Link to="/profile">Profile</Link>

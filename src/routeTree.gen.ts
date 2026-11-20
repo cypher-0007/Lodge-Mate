@@ -23,6 +23,7 @@ import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedHostRouteImport } from './routes/_authenticated/host'
+import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as BetaLodgesIndexRouteImport } from './routes/beta-lodges/index'
 import { Route as BetaLodgesIdRouteImport } from './routes/beta-lodges/$id'
@@ -98,6 +99,11 @@ const AuthenticatedHostRoute = AuthenticatedHostRouteImport.update({
   path: '/host',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMessagesRoute = AuthenticatedMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/host': typeof AuthenticatedHostRoute
+  '/messages': typeof AuthenticatedMessagesRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/host': typeof AuthenticatedHostRoute
+  '/messages': typeof AuthenticatedMessagesRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/host': typeof AuthenticatedHostRoute
+  '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/host'
+    | '/messages'
     | '/profile'
     | '/beta-lodges/$id'
     | '/listings/$id'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/host'
+    | '/messages'
     | '/profile'
     | '/beta-lodges/$id'
     | '/listings/$id'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/host'
+    | '/_authenticated/messages'
     | '/_authenticated/profile'
     | '/beta-lodges/$id'
     | '/listings/$id'
@@ -364,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHostRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/messages': {
+      id: '/_authenticated/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AuthenticatedMessagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -406,6 +425,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHostRoute: typeof AuthenticatedHostRoute
+  AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
@@ -413,6 +433,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHostRoute: AuthenticatedHostRoute,
+  AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }
 
