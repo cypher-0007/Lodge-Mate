@@ -72,6 +72,7 @@ export const mockListings: Listing[] = [
     amenities: ["Prepaid meter", "Borehole water", "Tiled floor", "Wardrobe", "Bathroom ensuite"],
     description:
       "Newly finished self-contained room in a 12-room lodge just off Ishiagu gate. Prepaid meter, steady borehole water, private balcony and a fenced compound with a caretaker on site.",
+    ownerId: "mock-provider-1",
     host: { name: "Mr. Emeka O.", role: "Landlord", since: "Host since 2023" },
   },
   {
@@ -89,6 +90,7 @@ export const mockListings: Listing[] = [
     amenities: ["Female only", "Fenced gate", "Study desk", "Shared kitchen", "Steady power"],
     description:
       "One bedspace open in a quiet 2-man room shared with a 300-level student. Female only, study desks included, clean shared kitchen, and rent covers the full academic session.",
+    ownerId: "mock-provider-4",
     host: { name: "Chiamaka N.", role: "Student Host", since: "Verified Student" },
   },
   {
@@ -106,6 +108,7 @@ export const mockListings: Listing[] = [
     amenities: ["Separate kitchen", "Water heater", "Parking space", "Balcony"],
     description:
       "Graduating and transferring the remaining 7 months on my one-bedroom apartment. Modern fittings stay, landlord has agreed to the transfer — paperwork completed at inspection.",
+    ownerId: "mock-provider-5",
     host: { name: "Ifeanyi A.", role: "Current Tenant", since: "Awaiting Verification" },
   },
   {
@@ -123,6 +126,7 @@ export const mockListings: Listing[] = [
     amenities: ["Gated security", "Solar backup", "Prepaid meter", "Water tank", "Waste disposal"],
     description:
       "Purpose-built student lodge on Uturu main road with 24-hour security, solar backup for lights and fans, and four rooms still open for the upcoming university session.",
+    ownerId: "mock-provider-2",
     host: { name: "Bright Homes Agency", role: "Verified Agent", since: "42 listings hosted" },
   },
   {
@@ -157,6 +161,7 @@ export const mockListings: Listing[] = [
     amenities: ["Fully tiled", "Prepaid meter", "Security guard", "Constant water", "POP ceiling"],
     description:
       "Modern executive self-contained room with POP ceiling, private kitchen and bathroom, fenced perimeter with night security guard, and clean borehole water supply.",
+    ownerId: "mock-provider-3",
     host: { name: "Chief Nwosu", role: "Landlord", since: "Host since 2022" },
   },
 ];

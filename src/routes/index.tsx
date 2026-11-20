@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   BadgeCheck,
@@ -16,6 +16,7 @@ import {
   Video,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
 
 import heroImage from "@/assets/hero-lodge.jpg";
 import listingLodgeImage from "@/assets/listing-lodge.jpg";
@@ -25,6 +26,13 @@ import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { isLocalDevPreview, useListingsQuery } from "@/lib/listings";
 
 export const Route = createFileRoute("/")({
@@ -46,12 +54,29 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const filters = [
-  { label: "School", value: "MOUAU" },
-  { label: "Area", value: "Ishiagu / Umudike" },
-  { label: "Room type", value: "Self-contained" },
-  { label: "Price", value: "₦150k – ₦300k" },
+const filterPills = [
+  { label: "School", value: "MOUAU/ABSU", to: "/browse" },
+  { label: "Price", value: "₦150k – ₦300k", to: "/browse?min=150000&max=300000" },
 ];
+
+const campusAreas: Record<"All" | "MOUAU" | "ABSU", Array<{ value: string; label: string }>> = {
+  All: [
+    { value: "Ishiagu", label: "Ishiagu Gate (MOUAU)" },
+    { value: "Umudike", label: "Umudike Main (MOUAU)" },
+    { value: "Western Gate", label: "Western Gate (MOUAU)" },
+    { value: "Uturu", label: "Uturu Main Road (ABSU)" },
+    { value: "Hilltop", label: "Hilltop / Main Gate (ABSU)" },
+  ],
+  MOUAU: [
+    { value: "Ishiagu", label: "Ishiagu Gate" },
+    { value: "Umudike", label: "Umudike Main" },
+    { value: "Western Gate", label: "Western Gate" },
+  ],
+  ABSU: [
+    { value: "Uturu", label: "Uturu Main Road" },
+    { value: "Hilltop", label: "Hilltop / Main Gate" },
+  ],
+};
 
 const trustPoints = [
   {
@@ -90,8 +115,30 @@ const listingTypes = [
 ];
 
 function Index() {
+  const navigate = useNavigate();
   const { data: liveListings = [], isLoading } = useListingsQuery();
   const featuredListings = liveListings.slice(0, 4);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSchool, setSelectedSchool] = useState<"All" | "MOUAU" | "ABSU">("All");
+  const [selectedArea, setSelectedArea] = useState<string>("All");
+
+  const availableAreas = campusAreas[selectedSchool];
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (selectedSchool !== "All") {
+      params.set("school", selectedSchool);
+    }
+    const queryParts = [searchQuery.trim(), selectedArea !== "All" ? selectedArea : null].filter(Boolean);
+    if (queryParts.length > 0) {
+      params.set("q", queryParts.join(" "));
+    }
+
+    const queryStr = params.toString();
+    navigate({ to: queryStr ? `/browse?${queryStr}` : "/browse" });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,41 +184,67 @@ function Index() {
             </p>
 
             {/* Search bar */}
-            <div className="mt-9 rounded-2xl bg-card p-3 shadow-lift">
+            <form onSubmit={handleSearch} className="mt-9 rounded-2xl bg-card p-3 shadow-lift">
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
                 <div className="flex flex-1 items-center gap-2 rounded-xl bg-muted px-3">
                   <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <Input
-                    placeholder="Search area, lodge name or landmark"
-                    className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search area (e.g. Ishiagu, Uturu), lodge name or room type"
+                    className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 md:flex md:items-center">
-                  {filters.slice(0, 2).map((f) => (
-                    <button
-                      key={f.label}
-                      className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent"
-                    >
-                      <span className="text-muted-foreground">{f.label}</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                  ))}
+                  {/* School Dropdown */}
+                  <Select
+                    value={selectedSchool}
+                    onValueChange={(val) => {
+                      setSelectedSchool(val as "All" | "MOUAU" | "ABSU");
+                      setSelectedArea("All");
+                    }}
+                  >
+                    <SelectTrigger className="h-10 w-full min-w-[130px] rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-none hover:bg-accent md:w-auto">
+                      <SelectValue placeholder="School" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-border bg-popover shadow-md">
+                      <SelectItem value="All">All Campuses</SelectItem>
+                      <SelectItem value="MOUAU">MOUAU (Umudike)</SelectItem>
+                      <SelectItem value="ABSU">ABSU (Uturu)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Area Dropdown */}
+                  <Select value={selectedArea} onValueChange={setSelectedArea}>
+                    <SelectTrigger className="h-10 w-full min-w-[130px] rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-none hover:bg-accent md:w-auto">
+                      <SelectValue placeholder="Area" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-border bg-popover shadow-md">
+                      <SelectItem value="All">All Areas</SelectItem>
+                      {availableAreas.map((area) => (
+                        <SelectItem key={area.value} value={area.value}>
+                          {area.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button size="lg" className="md:px-7" asChild>
-                  <Link to="/browse">Search</Link>
+                <Button type="submit" size="lg" className="md:px-7">
+                  Search
                 </Button>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2 px-1">
-                {filters.map((f) => (
-                  <span
+              <div className="mt-3 flex flex-wrap items-center gap-2 px-1">
+                {filterPills.map((f) => (
+                  <Link
                     key={f.label}
-                    className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+                    to={f.to}
+                    className="rounded-full bg-secondary/80 hover:bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground transition-colors"
                   >
                     {f.label}: {f.value}
-                  </span>
+                  </Link>
                 ))}
               </div>
-            </div>
+            </form>
           </div>
         </section>
 
