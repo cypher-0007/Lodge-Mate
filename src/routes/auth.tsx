@@ -5,11 +5,13 @@ import {
   BadgeCheck,
   Briefcase,
   Building2,
+  CalendarCheck,
   Check,
   CheckCircle2,
   Eye,
   EyeOff,
   GraduationCap,
+  Heart,
   KeyRound,
   Mail,
   MessageCircle,
@@ -86,8 +88,10 @@ export function Auth() {
   const [role, setRole] = useState<Role>("student");
   const [providerType, setProviderType] = useState<ProviderType>("landlord");
 
-  // Messaging Intent Banner State
+  // Messaging, Inspection and Bookmark Intent Banner State
   const [messageIntentBanner, setMessageIntentBanner] = useState<string | null>(null);
+  const [inspectionIntentBanner, setInspectionIntentBanner] = useState(false);
+  const [bookmarkIntentBanner, setBookmarkIntentBanner] = useState(false);
 
   // Account Type Selection Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -148,11 +152,15 @@ export function Auth() {
       setIsRecoveryMode(true);
     }
 
-    // Check for message intent in URL params
+    // Check for message, inspection or bookmark intent in URL params
     const intentParam = searchParams.get("intent") ?? search.intent;
     const recipientParam = searchParams.get("recipientName") ?? search.recipientName;
     if (intentParam === "message") {
       setMessageIntentBanner(recipientParam ? decodeURIComponent(recipientParam) : "the host");
+    } else if (intentParam === "inspection") {
+      setInspectionIntentBanner(true);
+    } else if (intentParam === "bookmark") {
+      setBookmarkIntentBanner(true);
     }
 
     // Restore intent from backup if returning from OAuth
@@ -210,7 +218,11 @@ export function Auth() {
   };
 
   const afterAuth = () => {
-    // 1. Check for stored message intent
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("lodgemate_pending_return_to");
+    }
+
+    // 1. Check for stored message or inspection intent
     const intent = consumeMessageIntent();
     if (intent) {
       const destination = getSafeReturnUrl(intent.returnTo);
@@ -350,6 +362,9 @@ export function Auth() {
       const intentRaw = window.sessionStorage.getItem("lodgemate_auth_intent");
       if (intentRaw) {
         window.localStorage.setItem("lodgemate_auth_intent_backup", intentRaw);
+      }
+      if (search.returnTo) {
+        window.localStorage.setItem("lodgemate_pending_return_to", search.returnTo);
       }
     }
 
@@ -706,6 +721,32 @@ export function Auth() {
                 <p className="font-semibold text-foreground">Join LodgeMate to start a conversation</p>
                 <p className="mt-0.5 text-muted-foreground leading-relaxed">
                   Create your free account to message {messageIntentBanner} and fellow students about accommodation near MOUAU and ABSU.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Inspection Intent Banner */}
+          {inspectionIntentBanner && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-foreground">
+              <CalendarCheck className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">Sign in to request an inspection</p>
+                <p className="mt-0.5 text-muted-foreground leading-relaxed">
+                  Join LodgeMate to schedule physical lodge inspections directly with verified hosts and agents — 100% free with zero upfront commitment.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Bookmark Intent Banner */}
+          {bookmarkIntentBanner && (
+            <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-foreground">
+              <Heart className="h-4 w-4 shrink-0 mt-0.5 text-destructive fill-destructive" />
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">Sign in to save this lodge</p>
+                <p className="mt-0.5 text-muted-foreground leading-relaxed">
+                  Create your free student account or sign in to bookmark accommodations to your dashboard for easy comparison and tracking.
                 </p>
               </div>
             </div>

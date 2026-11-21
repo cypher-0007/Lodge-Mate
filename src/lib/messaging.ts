@@ -8,38 +8,86 @@ import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 
 export interface MessageIntentPayload {
   intent: "message";
-  listingId?: string;
+  listingId?: string | undefined;
   recipientId: string;
   recipientName: string;
   recipientRole: "landlord" | "agent" | "student";
   returnTo: string;
 }
 
+export interface InspectionIntentPayload {
+  intent: "inspection";
+  listingId: string;
+  listingTitle?: string | undefined;
+  returnTo: string;
+}
+
+export interface BookmarkIntentPayload {
+  intent: "bookmark";
+  listingId: string;
+  listingTitle?: string | undefined;
+  returnTo: string;
+}
+
+export type AuthIntentPayload =
+  | MessageIntentPayload
+  | InspectionIntentPayload
+  | BookmarkIntentPayload;
+
 const INTENT_KEY = "lodgemate_auth_intent";
 
 export function saveMessageIntent(payload: MessageIntentPayload): void {
   if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(INTENT_KEY, JSON.stringify(payload));
+  const serialized = JSON.stringify(payload);
+  window.sessionStorage.setItem(INTENT_KEY, serialized);
+  window.localStorage.setItem("lodgemate_auth_intent_backup", serialized);
+  window.localStorage.setItem("lodgemate_pending_return_to", payload.returnTo);
 }
 
-export function consumeMessageIntent(): MessageIntentPayload | null {
+export function saveInspectionIntent(payload: InspectionIntentPayload): void {
+  if (typeof window === "undefined") return;
+  const serialized = JSON.stringify(payload);
+  window.sessionStorage.setItem(INTENT_KEY, serialized);
+  window.localStorage.setItem("lodgemate_auth_intent_backup", serialized);
+  window.localStorage.setItem("lodgemate_pending_return_to", payload.returnTo);
+}
+
+export function saveBookmarkIntent(payload: BookmarkIntentPayload): void {
+  if (typeof window === "undefined") return;
+  const serialized = JSON.stringify(payload);
+  window.sessionStorage.setItem(INTENT_KEY, serialized);
+  window.localStorage.setItem("lodgemate_auth_intent_backup", serialized);
+  window.localStorage.setItem("lodgemate_pending_return_to", payload.returnTo);
+}
+
+export function consumeMessageIntent(): AuthIntentPayload | null {
   if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(INTENT_KEY);
+  let raw = window.sessionStorage.getItem(INTENT_KEY);
+  if (!raw) {
+    raw = window.localStorage.getItem("lodgemate_auth_intent_backup");
+    if (raw) {
+      window.localStorage.removeItem("lodgemate_auth_intent_backup");
+    }
+  } else {
+    window.sessionStorage.removeItem(INTENT_KEY);
+    window.localStorage.removeItem("lodgemate_auth_intent_backup");
+  }
   if (!raw) return null;
-  window.sessionStorage.removeItem(INTENT_KEY);
   try {
-    return JSON.parse(raw) as MessageIntentPayload;
+    return JSON.parse(raw) as AuthIntentPayload;
   } catch {
     return null;
   }
 }
 
-export function peekMessageIntent(): MessageIntentPayload | null {
+export function peekMessageIntent(): AuthIntentPayload | null {
   if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(INTENT_KEY);
+  const raw =
+    window.sessionStorage.getItem(INTENT_KEY) ||
+    window.localStorage.getItem("lodgemate_auth_intent_backup");
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as MessageIntentPayload;
+    return JSON.parse(raw) as AuthIntentPayload;
   } catch {
     return null;
   }

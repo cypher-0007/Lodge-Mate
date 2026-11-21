@@ -127,17 +127,14 @@ function Index() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams();
-    if (selectedSchool !== "All") {
-      params.set("school", selectedSchool);
-    }
     const queryParts = [searchQuery.trim(), selectedArea !== "All" ? selectedArea : null].filter(Boolean);
-    if (queryParts.length > 0) {
-      params.set("q", queryParts.join(" "));
-    }
-
-    const queryStr = params.toString();
-    navigate({ to: queryStr ? `/browse?${queryStr}` : "/browse" });
+    navigate({
+      to: "/browse",
+      search: {
+        school: selectedSchool !== "All" ? selectedSchool : undefined,
+        q: queryParts.length > 0 ? queryParts.join(" ") : undefined,
+      },
+    });
   };
 
   return (

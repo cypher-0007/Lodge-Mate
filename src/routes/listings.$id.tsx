@@ -12,7 +12,7 @@ import {
   RefreshCw,
   ShieldAlert,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { SiteFooter } from "@/components/site-footer";
@@ -33,10 +33,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { fetchListingById, getFallbackImage, isLocalDevPreview } from "@/lib/listings";
-import { getOrCreateConversation, saveMessageIntent } from "@/lib/messaging";
-import { useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
+import { getOrCreateConversation, saveInspectionIntent, saveMessageIntent } from "@/lib/messaging";
+import { triggerGuestBookmarkPrompt, useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
 
 export const Route = createFileRoute("/listings/$id")({
+  validateSearch: (search: Record<string, unknown>): { action?: string | undefined } => ({
+    action: typeof search["action"] === "string" ? search["action"] : undefined,
+  }),
   loader: async ({ params }) => {
     try {
       const listing = await fetchListingById(params.id);
@@ -83,6 +86,7 @@ const TIME_SLOTS = [
 
 function ListingDetail() {
   const { listing: l } = Route.useLoaderData();
+  const search = Route.useSearch();
   const { user, isStudent } = useAuth();
   const navigate = useNavigate();
 
@@ -97,6 +101,38 @@ function ListingDetail() {
   const [inspectionNote, setInspectionNote] = useState("");
   const [isSubmittingInspection, setIsSubmittingInspection] = useState(false);
 
+  const hasExecutedAutoSave = useRef(false);
+
+  // Auto-open inspection modal if returning from auth with action=inspect
+  useEffect(() => {
+    if (search.action === "inspect") {
+      if (user && isStudent) {
+        setIsInspectionOpen(true);
+      } else if (user && !isStudent) {
+        toast.error("Host accounts cannot book inspections", {
+          description: "Please switch to a student account to request property inspections.",
+        });
+      }
+    }
+  }, [search.action, user, isStudent]);
+
+  // Auto-save listing if returning from auth with action=save
+  useEffect(() => {
+    if (search.action === "save" && !hasExecutedAutoSave.current) {
+      if (user && isStudent) {
+        hasExecutedAutoSave.current = true;
+        if (!savedIds.includes(l.id) && !toggleSave.isPending) {
+          toggleSave.mutate({ listingId: l.id, currentlySaved: false });
+        }
+      } else if (user && !isStudent) {
+        hasExecutedAutoSave.current = true;
+        toast.error("Host accounts cannot save listings", {
+          description: "Please switch to a student account to bookmark accommodations.",
+        });
+      }
+    }
+  }, [search.action, user, isStudent, savedIds, l.id, toggleSave]);
+
   // Report Modal State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -104,10 +140,22 @@ function ListingDetail() {
 
   const handleBookInspectionClick = () => {
     if (!user) {
-      toast.info("Please sign in to request an inspection", {
-        description: "Inspection requests are reserved for authenticated students.",
+      saveInspectionIntent({
+        intent: "inspection",
+        listingId: l.id,
+        listingTitle: l.title,
+        returnTo: `/listings/${l.id}?action=inspect`,
       });
-      navigate({ to: "/auth" });
+      toast.info("Please sign in to request an inspection", {
+        description: "Create a free account or sign in as a student to schedule an in-person visit.",
+      });
+      navigate({
+        to: "/auth",
+        search: {
+          intent: "inspection",
+          returnTo: `/listings/${l.id}?action=inspect`,
+        },
+      });
       return;
     }
     if (!isStudent) {
@@ -133,8 +181,8 @@ function ListingDetail() {
         recipientRole: isPeerBedspace
           ? "student"
           : l.host.role.toLowerCase().includes("agent")
-          ? "agent"
-          : "landlord",
+            ? "agent"
+            : "landlord",
         returnTo: `/listings/${l.id}`,
       });
       toast.info("Please sign in to message this host", {
@@ -290,7 +338,23 @@ function ListingDetail() {
               {(!user || isStudent) && (
                 <button
                   type="button"
-                  onClick={() => toggleSave.mutate({ listingId: l.id, currentlySaved: isSaved })}
+                  onClick={() => {
+                    if (!user) {
+                      triggerGuestBookmarkPrompt({
+                        listingId: l.id,
+                        listingTitle: l.title,
+                        navigate,
+                      });
+                      return;
+                    }
+                    if (!isStudent) {
+                      toast.error("Host accounts cannot save listings", {
+                        description: "Please switch to a student account to bookmark accommodations.",
+                      });
+                      return;
+                    }
+                    toggleSave.mutate({ listingId: l.id, currentlySaved: isSaved });
+                  }}
                   disabled={toggleSave.isPending}
                   className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full shadow-md backdrop-blur-sm transition-transform active:scale-90 ${isSaved
                     ? "bg-destructive text-white"

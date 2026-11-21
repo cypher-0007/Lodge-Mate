@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { transformDatabaseListing, type Listing } from "@/lib/listings";
+import { saveBookmarkIntent } from "@/lib/messaging";
 
 /**
  * Fetches the IDs of listings saved by the currently authenticated student.
@@ -155,6 +156,44 @@ export function useToggleSaveListing() {
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to update saved listing");
+    },
+  });
+}
+
+/**
+ * Friendly guest bookmark handler that preserves the intended listing and destination,
+ * displays an actionable sign-in notification, and safely directs the user to /auth.
+ */
+export function triggerGuestBookmarkPrompt({
+  listingId,
+  listingTitle,
+  navigate,
+}: {
+  listingId: string;
+  listingTitle?: string;
+  navigate: (opts: { to: string; search?: Record<string, unknown> }) => void;
+}) {
+  const returnTo = `/listings/${listingId}?action=save`;
+  saveBookmarkIntent({
+    intent: "bookmark",
+    listingId,
+    listingTitle,
+    returnTo,
+  });
+
+  toast.info("Sign in to save this lodge", {
+    description: "Create a free student account or sign in to bookmark accommodations to your dashboard.",
+    action: {
+      label: "Sign in",
+      onClick: () => {
+        navigate({
+          to: "/auth",
+          search: {
+            intent: "bookmark",
+            returnTo,
+          },
+        });
+      },
     },
   });
 }

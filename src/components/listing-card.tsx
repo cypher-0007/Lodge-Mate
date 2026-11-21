@@ -1,12 +1,14 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { BadgeCheck, ChevronRight, Heart, MapPin, ShieldAlert } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth-context";
 import { getFallbackImage, type Listing } from "@/lib/listings";
-import { useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
+import { triggerGuestBookmarkPrompt, useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
 
 export function ListingCard({ listing: l }: { listing: Listing }) {
   const { user, isStudent } = useAuth();
+  const navigate = useNavigate();
   const { data: savedIds = [] } = useSavedListingIds();
   const toggleSave = useToggleSaveListing();
 
@@ -15,6 +17,23 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
   const handleToggleSave = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!user) {
+      triggerGuestBookmarkPrompt({
+        listingId: l.id,
+        listingTitle: l.title,
+        navigate,
+      });
+      return;
+    }
+
+    if (!isStudent) {
+      toast.error("Host accounts cannot save listings", {
+        description: "Please switch to a student account to bookmark accommodations.",
+      });
+      return;
+    }
+
     toggleSave.mutate({ listingId: l.id, currentlySaved: isSaved });
   };
 

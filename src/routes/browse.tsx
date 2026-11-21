@@ -17,7 +17,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ListingCard, ListingCardSkeleton } from "@/components/listing-card";
@@ -33,7 +33,33 @@ import { isLocalDevPreview, useListingsQuery } from "@/lib/listings";
 import { getOrCreateConversation, saveMessageIntent } from "@/lib/messaging";
 import { type AccommodationProvider, useProvidersQuery } from "@/lib/providers";
 
+// ── Validated Search Parameter Types ──────────────────────────────────────────
+type BrowseSearch = {
+  q?: string | undefined;
+  school?: "MOUAU" | "ABSU" | undefined;
+  kind?: "Full lodge" | "Bedspace" | "Takeover" | undefined;
+  verified?: boolean | undefined;
+  min?: number | undefined;
+  max?: number | undefined;
+};
+
 export const Route = createFileRoute("/browse")({
+  validateSearch: (search: Record<string, unknown>): BrowseSearch => {
+    const school = search["school"];
+    const kind = search["kind"];
+    const minRaw = search["min"];
+    const maxRaw = search["max"];
+    const minNum = typeof minRaw === "number" ? minRaw : minRaw != null && !isNaN(Number(minRaw)) ? Number(minRaw) : undefined;
+    const maxNum = typeof maxRaw === "number" ? maxRaw : maxRaw != null && !isNaN(Number(maxRaw)) ? Number(maxRaw) : undefined;
+    return {
+      q: typeof search["q"] === "string" && search["q"].trim() ? search["q"].trim() : undefined,
+      school: school === "MOUAU" || school === "ABSU" ? school : undefined,
+      kind: kind === "Full lodge" || kind === "Bedspace" || kind === "Takeover" ? kind : undefined,
+      verified: search["verified"] === true || search["verified"] === "true" ? true : undefined,
+      min: minNum !== undefined && minNum >= 0 ? minNum : undefined,
+      max: maxNum !== undefined && maxNum >= 0 ? maxNum : undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "Browse Student Lodges & Accommodation Providers — LodgeMate" },
@@ -119,53 +145,89 @@ function getBudgetFullLabel(min: number | null, max: number | null): string {
 }
 
 function Browse() {
-  // Search Scope: "listings" vs "providers"
-  const [searchScope, setSearchScope] = useState<"listings" | "providers">("listings");
+  // ── URL search params (source of truth for shareable / bookmarkable state) ──
+  const urlSearch = Route.useSearch();
+  const navigate = useNavigate();
 
-  // ── Listings Filter State ──────────────────────────────────────────────────
-  const [query, setQuery] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("q") || params.get("area") || "";
-    }
-    return "";
-  });
-  const [school, setSchool] = useState<"All" | "MOUAU" | "ABSU">(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const s = params.get("school");
-      if (s === "MOUAU" || s === "ABSU") return s;
-    }
-    return "All";
-  });
-  const [kind, setKind] = useState<"All" | "Full lodge" | "Bedspace" | "Takeover">("All");
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  // ── Listings Filter State (initialised from URL params) ────────────────────
+  const [searchScope, setSearchScope] = useState<"listings" | "providers">("listings");
+  const [query, setQuery] = useState(urlSearch.q ?? "");
+  const [school, setSchool] = useState<"All" | "MOUAU" | "ABSU">(urlSearch.school ?? "All");
+  const [kind, setKind] = useState<"All" | "Full lodge" | "Bedspace" | "Takeover">(urlSearch.kind ?? "All");
+  const [verifiedOnly, setVerifiedOnly] = useState(urlSearch.verified ?? false);
   const [selectedHostFilter, setSelectedHostFilter] = useState<{ id: string; name: string } | null>(null);
 
   // Budget Filter State
-  const [appliedMinPrice, setAppliedMinPrice] = useState<number | null>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const min = params.get("min");
-      if (min && !isNaN(Number(min)) && Number(min) >= 0) return Number(min);
-    }
-    return null;
-  });
-
-  const [appliedMaxPrice, setAppliedMaxPrice] = useState<number | null>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const max = params.get("max");
-      if (max && !isNaN(Number(max)) && Number(max) >= 0) return Number(max);
-    }
-    return null;
-  });
+  const [appliedMinPrice, setAppliedMinPrice] = useState<number | null>(urlSearch.min ?? null);
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState<number | null>(urlSearch.max ?? null);
 
   // Draft inputs for Budget Popover
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
-  const [minInput, setMinInput] = useState(appliedMinPrice !== null ? String(appliedMinPrice) : "");
-  const [maxInput, setMaxInput] = useState(appliedMaxPrice !== null ? String(appliedMaxPrice) : "");
+  const [minInput, setMinInput] = useState(urlSearch.min !== undefined ? String(urlSearch.min) : "");
+  const [maxInput, setMaxInput] = useState(urlSearch.max !== undefined ? String(urlSearch.max) : "");
   const [budgetError, setBudgetError] = useState<string | null>(null);
+
+  // ── Sync component state when URL search params change (back/forward/links) ─
+  useEffect(() => {
+    setQuery(urlSearch.q ?? "");
+    setSchool(urlSearch.school ?? "All");
+    setKind(urlSearch.kind ?? "All");
+    setVerifiedOnly(urlSearch.verified ?? false);
+    const newMin = urlSearch.min ?? null;
+    const newMax = urlSearch.max ?? null;
+    setAppliedMinPrice(newMin);
+    setAppliedMaxPrice(newMax);
+    setMinInput(newMin !== null ? String(newMin) : "");
+    setMaxInput(newMax !== null ? String(newMax) : "");
+    setBudgetError(null);
+    // Clear host filter when URL changes externally (e.g. back/forward)
+    setSelectedHostFilter(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSearch.q, urlSearch.school, urlSearch.kind, urlSearch.verified, urlSearch.min, urlSearch.max]);
+
+  // ── URL-writing helper: update URL search params from filter state ──────────
+  const updateUrl = (patch: {
+    q?: string | undefined;
+    school?: "MOUAU" | "ABSU" | undefined;
+    kind?: "Full lodge" | "Bedspace" | "Takeover" | undefined;
+    verified?: boolean | undefined;
+    min?: number | undefined;
+    max?: number | undefined;
+  }) => {
+    navigate({
+      to: "/browse",
+      search: (prev) => {
+        const next = { ...prev, ...patch };
+        // Strip undefined / falsy default values to keep URL clean
+        if (!next.q) delete next.q;
+        if (!next.school) delete next.school;
+        if (!next.kind) delete next.kind;
+        if (!next.verified) delete next.verified;
+        if (next.min === undefined || next.min === null) delete next.min;
+        if (next.max === undefined || next.max === null) delete next.max;
+        return next;
+      },
+      replace: true,
+    });
+  };
+
+  // ── Wrapped filter setters: update state AND URL atomically ───────────────
+  const handleSetQuery = (q: string) => {
+    setQuery(q);
+    updateUrl({ q: q.trim() || undefined });
+  };
+  const handleSetSchool = (s: "All" | "MOUAU" | "ABSU") => {
+    setSchool(s);
+    updateUrl({ school: s === "All" ? undefined : s });
+  };
+  const handleSetKind = (k: "All" | "Full lodge" | "Bedspace" | "Takeover") => {
+    setKind(k);
+    updateUrl({ kind: k === "All" ? undefined : k });
+  };
+  const handleSetVerifiedOnly = (v: boolean) => {
+    setVerifiedOnly(v);
+    updateUrl({ verified: v || undefined });
+  };
 
   // ── Providers Filter State ─────────────────────────────────────────────────
   const [providerQuery, setProviderQuery] = useState("");
@@ -195,6 +257,7 @@ function Browse() {
     setAppliedMaxPrice(null);
     setBudgetError(null);
     setIsBudgetOpen(false);
+    updateUrl({ min: undefined, max: undefined });
   };
 
   const clearAllListingFilters = () => {
@@ -203,7 +266,13 @@ function Browse() {
     setKind("All");
     setVerifiedOnly(false);
     setSelectedHostFilter(null);
-    clearBudget();
+    setMinInput("");
+    setMaxInput("");
+    setAppliedMinPrice(null);
+    setAppliedMaxPrice(null);
+    setBudgetError(null);
+    setIsBudgetOpen(false);
+    navigate({ to: "/browse", search: {}, replace: true });
   };
 
   const clearAllProviderFilters = () => {
@@ -250,6 +319,10 @@ function Browse() {
     setAppliedMinPrice(cleanMin);
     setAppliedMaxPrice(cleanMax);
     setIsBudgetOpen(false);
+    updateUrl({
+      min: cleanMin !== null ? cleanMin : undefined,
+      max: cleanMax !== null ? cleanMax : undefined,
+    });
   };
 
   const handlePopoverOpenChange = (open: boolean) => {
@@ -359,7 +432,6 @@ function Browse() {
   };
 
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const handleMessageProvider = async (provider: AccommodationProvider) => {
     if (!user) {
@@ -486,13 +558,13 @@ function Browse() {
                       <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <Input
                         value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        onChange={(e) => handleSetQuery(e.target.value)}
                         placeholder="Search by area, lodge name, campus or amenity..."
                         className="h-10 border-0 bg-transparent pr-8 shadow-none focus-visible:ring-0 text-sm"
                       />
                       {query && (
                         <button
-                          onClick={() => setQuery("")}
+                          onClick={() => handleSetQuery("")}
                           className="absolute right-2.5 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                           title="Clear search"
                           aria-label="Clear search input"
@@ -505,7 +577,7 @@ function Browse() {
                     {/* Verified Only Toggle Button */}
                     <Button
                       variant={verifiedOnly ? "default" : "outline"}
-                      onClick={() => setVerifiedOnly((v) => !v)}
+                      onClick={() => handleSetVerifiedOnly(!verifiedOnly)}
                       className={`h-10 shrink-0 gap-2 rounded-xl text-xs font-semibold transition-all ${
                         verifiedOnly
                           ? "bg-primary text-primary-foreground shadow-sm"
@@ -531,7 +603,7 @@ function Browse() {
                         return (
                           <button
                             key={s.id}
-                            onClick={() => setSchool(s.id)}
+                            onClick={() => handleSetSchool(s.id)}
                             className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
                               active
                                 ? "bg-primary text-primary-foreground shadow-xs font-semibold"
@@ -555,7 +627,7 @@ function Browse() {
                         return (
                           <button
                             key={k.id}
-                            onClick={() => setKind(k.id)}
+                            onClick={() => handleSetKind(k.id)}
                             className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
                               active
                                 ? "bg-primary text-primary-foreground shadow-xs font-semibold"
@@ -956,7 +1028,7 @@ function Browse() {
                     {query.trim() && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted px-2.5 py-0.5 text-xs text-foreground">
                         Keyword: &ldquo;{query.trim()}&rdquo;
-                        <button onClick={() => setQuery("")} className="hover:text-destructive">
+                        <button onClick={() => handleSetQuery("")} className="hover:text-destructive">
                           <X className="h-3 w-3" />
                         </button>
                       </span>
@@ -964,7 +1036,7 @@ function Browse() {
                     {school !== "All" && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted px-2.5 py-0.5 text-xs text-foreground">
                         Campus: {school}
-                        <button onClick={() => setSchool("All")} className="hover:text-destructive">
+                        <button onClick={() => handleSetSchool("All")} className="hover:text-destructive">
                           <X className="h-3 w-3" />
                         </button>
                       </span>
@@ -972,7 +1044,7 @@ function Browse() {
                     {kind !== "All" && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted px-2.5 py-0.5 text-xs text-foreground">
                         Type: {kind}
-                        <button onClick={() => setKind("All")} className="hover:text-destructive">
+                        <button onClick={() => handleSetKind("All")} className="hover:text-destructive">
                           <X className="h-3 w-3" />
                         </button>
                       </span>
@@ -980,7 +1052,7 @@ function Browse() {
                     {verifiedOnly && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted px-2.5 py-0.5 text-xs text-foreground">
                         Verified only
-                        <button onClick={() => setVerifiedOnly(false)} className="hover:text-destructive">
+                        <button onClick={() => handleSetVerifiedOnly(false)} className="hover:text-destructive">
                           <X className="h-3 w-3" />
                         </button>
                       </span>
