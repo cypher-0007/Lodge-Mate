@@ -11,7 +11,6 @@ import {
   Phone,
   Search,
   ShieldCheck,
-  Sparkles,
   Users,
   Video,
   Zap,
@@ -167,7 +166,6 @@ function Index() {
                 to="/beta-lodges"
                 className="inline-flex items-center gap-1.5 rounded-full border border-warning/50 bg-warning/20 px-3 py-1 text-xs font-semibold text-warning-foreground backdrop-blur-sm transition-all hover:bg-warning/30 hover:scale-[1.02]"
               >
-                <Sparkles className="h-3 w-3 text-warning" />
                 <span>Beta Lodges with Direct Landlord Contacts</span>
                 <ArrowRight className="h-3 w-3" />
               </Link>
@@ -322,7 +320,7 @@ function Index() {
               {/* Left Column: Copy & Value Proposition */}
               <div className="lg:col-span-7">
                 <div className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/15 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-warning">
-                  <Sparkles className="h-3.5 w-3.5 text-warning" />
+                  <ShieldCheck className="h-3.5 w-3.5 text-warning" />
                   <span>VIP Student Access · Beta Lodges</span>
                 </div>
 
@@ -410,7 +408,7 @@ function Index() {
 
                       {/* Card Overlays */}
                       <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-extrabold text-warning-foreground shadow-sm">
-                        <Sparkles className="h-3 w-3" /> Beta Verified
+                        <BadgeCheck className="h-3 w-3" /> Beta Verified
                       </span>
 
                       <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">

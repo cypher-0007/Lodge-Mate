@@ -34,7 +34,7 @@ export function BetaLodgeCard({ lodge: l, hasAccess, isDemo }: BetaLodgeCardProp
 
           {/* Beta badge */}
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/95 px-2.5 py-1 text-xs font-bold text-warning-foreground shadow-sm backdrop-blur-sm">
-            ✦ Beta
+            Beta
           </span>
 
           {/* Demo flag */}

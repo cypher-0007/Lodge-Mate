@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BadgeCheck, CalendarClock, Clock, Lock, Sparkles } from "lucide-react";
+import { BadgeCheck, CalendarClock, Clock, Lock } from "lucide-react";
 
 import type { BetaAccessPass, BetaLodgesConfig } from "@/lib/beta-lodges";
 import { formatBetaDuration, formatBetaPrice } from "@/lib/beta-lodges";
@@ -35,7 +35,7 @@ export function BetaAccessBanner({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
-              <Sparkles className="h-3.5 w-3.5" />
+              <BadgeCheck className="h-3.5 w-3.5" />
             </span>
             <div>
               <p className="text-sm font-semibold text-orange-800 dark:text-orange-200">

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertCircle, ArrowRight, BadgeCheck, Lock, RefreshCw, Video } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeCheck, Building2, Lock, RefreshCw, Video } from "lucide-react";
 
 import { BetaLodgeCard, BetaLodgeCardSkeleton } from "@/components/beta-lodge-card";
 import { BetaAccessBanner } from "@/components/beta-access-banner";
@@ -93,7 +93,7 @@ function BetaLodgesPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base text-white/70 sm:text-lg">
             Premium verified lodges with direct landlord contact, private video walkthroughs and
-            on-site inspection notes — before anyone else gets them.
+            on-site inspection notes, before anyone else gets them.
           </p>
 
           {config && !hasAccess && (
@@ -252,7 +252,7 @@ function BetaLodgesPage() {
           {/* Empty state */}
           {!isLoading && !previewQuery.isError && lodges.length === 0 && (
             <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
-              <span className="text-5xl opacity-30">✦</span>
+              <Building2 className="h-10 w-10 text-muted-foreground/40" />
               <div>
                 <p className="font-semibold text-foreground">No Beta Lodges yet</p>
                 <p className="mt-1 text-sm text-muted-foreground">

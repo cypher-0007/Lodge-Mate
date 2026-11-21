@@ -11,8 +11,8 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Users,
   Wallet,
   X,
@@ -488,7 +488,6 @@ function Browse() {
           <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
                 <span>MOUAU &amp; ABSU Student Marketplace</span>
               </div>
 
@@ -502,51 +501,61 @@ function Browse() {
 
             {/* Filter & Search Card */}
             <div className="mt-8 rounded-2xl border border-border/80 bg-card p-3 shadow-card sm:p-4">
-              {/* Search Scope Switcher: Listings vs Landlords & Agents */}
-              <div className="flex items-center gap-1.5 sm:gap-2 border-b border-border/60 pb-3 mb-3">
-                <button
-                  type="button"
-                  onClick={() => setSearchScope("listings")}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                    searchScope === "listings"
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
+              {/* Search Scope Switcher: Accommodation vs Landlords & Agents */}
+              <div className="mb-4 pb-3 border-b border-border/60">
+                <div
+                  role="tablist"
+                  aria-label="Browse scope"
+                  className="grid w-full grid-cols-2 gap-1 rounded-xl border border-border/70 bg-muted/50 p-1 sm:inline-flex sm:w-auto sm:gap-1.5"
                 >
-                  <Home className="h-3.5 w-3.5" />
-                  <span>Accommodation</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={searchScope === "listings"}
+                    onClick={() => setSearchScope("listings")}
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-semibold transition-all sm:px-3.5 sm:text-xs ${
                       searchScope === "listings"
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "text-muted-foreground hover:bg-background/80 hover:text-foreground"
                     }`}
                   >
-                    {listingsData.length}
-                  </span>
-                </button>
+                    <Home className="h-3.5 w-3.5 shrink-0" />
+                    <span className="whitespace-nowrap">Accommodation</span>
+                    <span
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                        searchScope === "listings"
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-muted text-muted-foreground border border-border/40"
+                      }`}
+                    >
+                      {listingsData.length}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setSearchScope("providers")}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                    searchScope === "providers"
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  <span>Landlords &amp; Agents</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={searchScope === "providers"}
+                    onClick={() => setSearchScope("providers")}
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-semibold transition-all sm:px-3.5 sm:text-xs ${
                       searchScope === "providers"
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "text-muted-foreground hover:bg-background/80 hover:text-foreground"
                     }`}
                   >
-                    {providersData.length}
-                  </span>
-                </button>
+                    <Users className="h-3.5 w-3.5 shrink-0" />
+                    <span className="whitespace-nowrap">Landlords &amp; Agents</span>
+                    <span
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                        searchScope === "providers"
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-muted text-muted-foreground border border-border/40"
+                      }`}
+                    >
+                      {providersData.length}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* Scope A: Listings Search & Filters */}
@@ -977,7 +986,7 @@ function Browse() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/20 text-warning shadow-xs">
-                  <Sparkles className="h-5 w-5" />
+                  <ShieldCheck className="h-5 w-5" />
                 </span>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">

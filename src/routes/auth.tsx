@@ -17,7 +17,6 @@ import {
   MessageCircle,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
   UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -470,7 +469,6 @@ export function Auth() {
           {/* Left Context Column (Visible on Desktop) */}
           <div className="hidden flex-col justify-center text-white lg:flex">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-semibold backdrop-blur-md">
-              <Sparkles className="h-3.5 w-3.5 text-warning" />
               <span>MOUAU &amp; ABSU Campus Housing</span>
             </div>
 

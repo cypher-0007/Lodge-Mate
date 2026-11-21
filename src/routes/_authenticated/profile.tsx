@@ -6,7 +6,6 @@ import {
   Building2,
   Briefcase,
   MapPin,
-  Sparkles,
   CheckCircle2,
   ShieldCheck,
   Camera,
@@ -970,7 +969,7 @@ function ProfilePage() {
                       <span className="text-xs text-muted-foreground">Beta Lodges Pass</span>
                       {hasBetaAccess ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          <Sparkles className="h-3 w-3" /> Active Pass
+                          <CheckCircle2 className="h-3 w-3" /> Active Pass
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-muted border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">

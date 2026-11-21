@@ -10,7 +10,6 @@ import {
   HeartHandshake,
   MapPin,
   ShieldCheck,
-  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -94,7 +93,6 @@ function AboutPage() {
 
           <div className="relative mx-auto max-w-4xl px-5 text-center sm:px-6">
             <Badge className="border-white/20 bg-white/10 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
-              <Sparkles className="mr-1.5 h-3.5 w-3.5 text-warning" />
               About LodgeMate
             </Badge>
 

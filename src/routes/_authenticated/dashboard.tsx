@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Flag,
-  Sparkles,
   ExternalLink,
   Edit2,
   ToggleLeft,

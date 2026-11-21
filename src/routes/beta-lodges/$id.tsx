@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowLeft,
   BadgeCheck,
+  Building2,
   Lock,
   MapPin,
   Phone,
@@ -198,7 +199,7 @@ function BetaLodgeDetailPage() {
           )}
           {/* Beta ribbon */}
           <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/95 px-3 py-1 text-xs font-bold text-warning-foreground shadow-sm">
-            ✦ Beta Lodge
+            Beta Lodge
           </span>
           {lodge.verified ? (
             <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-primary/95 px-2.5 py-1 text-xs font-semibold text-primary-foreground">
@@ -456,7 +457,7 @@ function BetaLodgeNotFound() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
       <div className="flex flex-1 flex-col items-center justify-center gap-5 px-4 py-20 text-center">
-        <span className="text-6xl opacity-30">✦</span>
+        <Building2 className="h-12 w-12 text-muted-foreground/40" />
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Beta Lodge not found</h1>
           <p className="mt-2 text-sm text-muted-foreground">
