@@ -25,6 +25,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedHostRouteImport } from './routes/_authenticated/host'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedVerifyProviderRouteImport } from './routes/_authenticated/verify-provider'
 import { Route as BetaLodgesIndexRouteImport } from './routes/beta-lodges/index'
 import { Route as BetaLodgesIdRouteImport } from './routes/beta-lodges/$id'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
@@ -109,6 +110,12 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedVerifyProviderRoute =
+  AuthenticatedVerifyProviderRouteImport.update({
+    id: '/verify-provider',
+    path: '/verify-provider',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const BetaLodgesIndexRoute = BetaLodgesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -146,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/host': typeof AuthenticatedHostRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/verify-provider': typeof AuthenticatedVerifyProviderRoute
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/beta-lodges/': typeof BetaLodgesIndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/host': typeof AuthenticatedHostRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/verify-provider': typeof AuthenticatedVerifyProviderRoute
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/beta-lodges': typeof BetaLodgesIndexRoute
@@ -189,6 +198,7 @@ export interface FileRoutesById {
   '/_authenticated/host': typeof AuthenticatedHostRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/verify-provider': typeof AuthenticatedVerifyProviderRoute
   '/beta-lodges/$id': typeof BetaLodgesIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/beta-lodges/': typeof BetaLodgesIndexRoute
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/host'
     | '/messages'
     | '/profile'
+    | '/verify-provider'
     | '/beta-lodges/$id'
     | '/listings/$id'
     | '/beta-lodges/'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/host'
     | '/messages'
     | '/profile'
+    | '/verify-provider'
     | '/beta-lodges/$id'
     | '/listings/$id'
     | '/beta-lodges'
@@ -254,6 +266,7 @@ export interface FileRouteTypes {
     | '/_authenticated/host'
     | '/_authenticated/messages'
     | '/_authenticated/profile'
+    | '/_authenticated/verify-provider'
     | '/beta-lodges/$id'
     | '/listings/$id'
     | '/beta-lodges/'
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/verify-provider': {
+      id: '/_authenticated/verify-provider'
+      path: '/verify-provider'
+      fullPath: '/verify-provider'
+      preLoaderRoute: typeof AuthenticatedVerifyProviderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/beta-lodges/': {
       id: '/beta-lodges/'
       path: '/'
@@ -427,6 +447,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHostRoute: typeof AuthenticatedHostRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedVerifyProviderRoute: typeof AuthenticatedVerifyProviderRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -435,6 +456,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHostRoute: AuthenticatedHostRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedVerifyProviderRoute: AuthenticatedVerifyProviderRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

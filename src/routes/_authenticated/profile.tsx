@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   GraduationCap,
   Phone,
@@ -1000,8 +1000,13 @@ function ProfilePage() {
                       )}
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
-                      Verification badges are issued after on-site lodge inspection by campus student representatives.
+                      Verification requires confirmed email and phone, ID and selfie evidence, property proof, and manual review.
                     </p>
+                    {!profile?.verified && (
+                      <Button asChild size="sm" variant="outline" className="mt-3">
+                        <Link to="/verify-provider">Start or check provider verification</Link>
+                      </Button>
+                    )}
                   </div>
                 )}
 

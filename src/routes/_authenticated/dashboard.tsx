@@ -72,8 +72,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     ],
   }),
   beforeLoad: ({ context }) => {
-    // If user is exclusively a landlord/agent, redirect them to the host panel
-    if (context.isHost && !context.roles.includes("student") && !context.isAdmin) {
+    // A landlord/agent account should land in the host panel even if an older
+    // student role row still exists from a previous signup attempt.
+    if (context.roles.includes("landlord") && !context.isAdmin) {
       throw redirect({ to: "/host" });
     }
   },

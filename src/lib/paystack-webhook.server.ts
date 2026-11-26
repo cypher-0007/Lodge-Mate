@@ -29,6 +29,7 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { verifyAndIssueBetaAccessPass } from "@/lib/payment-verification.server";
+import { processProviderVerificationWebhook } from "@/lib/provider-verification.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -232,11 +233,19 @@ export async function handlePaystackWebhook(rawBody: string): Promise<WebhookHan
   // ── 5. Resolve student user_id from our own DB (never from payload) ───────
   const userId = await resolveUserIdFromReference(reference);
   if (!userId) {
-    // The reference is not in beta_pending_payments.
-    // This can legitimately happen if Paystack sends a webhook for a non-Beta
-    // Lodge transaction (e.g., a future feature). Log and acknowledge safely.
-    console.info(`[Paystack Webhook] No pending Beta payment found for ref: ${reference} — not a Beta Lodge transaction`);
-    return { status: "skip", reason: "No pending Beta Lodge payment found for this reference" };
+    // Provider verification uses the same signed webhook endpoint, but has
+    // its own payment snapshot and fulfilment checks.
+    const providerResult = await processProviderVerificationWebhook(reference);
+    if (!providerResult.found) {
+      console.info(`[Paystack Webhook] No LodgeMate payment found for ref: ${reference}`);
+      return { status: "skip", reason: "No pending LodgeMate payment found for this reference" };
+    }
+    if (!providerResult.success) {
+      console.error(`[Paystack Webhook] Provider verification payment failed for ${reference}: ${providerResult.error}`);
+      return { status: "error", reason: providerResult.error ?? "Provider verification payment failed" };
+    }
+    console.info(`[Paystack Webhook] Provider verification payment completed for ref: ${reference}`);
+    return { status: "ok", message: `Provider verification submitted for reference ${reference}` };
   }
 
   // ── 6. Verify the transaction independently with Paystack API and issue pass

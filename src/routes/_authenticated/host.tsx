@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit2, MessageCircle, Phone, ToggleLeft, ToggleRight, Trash2, User } from "lucide-react";
 import { useState } from "react";
@@ -83,7 +83,7 @@ type HostListing = {
 };
 
 function HostPanel() {
-  const { user, isHost, providerType } = useAuth();
+  const { user, isHost, providerType, profile } = useAuth();
   const qc = useQueryClient();
 
   // ── Create form state ──────────────────────────────────────────────────────
@@ -388,6 +388,25 @@ function HostPanel() {
           <p className="text-sm text-muted-foreground">
             Ask the LodgeMate team to upgrade your account to a landlord/agent to post rooms.
           </p>
+        </Panel>
+      </DashboardShell>
+    );
+  }
+
+  if (!profile?.verified) {
+    return (
+      <DashboardShell
+        title="Host panel"
+        subtitle="Verify your provider identity before submitting lodge listings."
+        badge={providerType === "agent" ? "Independent Agent" : "Landlord"}
+      >
+        <Panel title="Provider verification required" description="Complete email and phone checks, upload your ID, a selfie, and property authorization, then pay the ₦3,500 review fee.">
+          <p className="text-sm text-muted-foreground">
+            LodgeMate reviews applications manually. Your provider badge activates only after approval.
+          </p>
+          <Button asChild className="mt-4">
+            <Link to="/verify-provider">Start provider verification</Link>
+          </Button>
         </Panel>
       </DashboardShell>
     );

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BedDouble, Building2, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ const kinds = [
 ];
 
 function ListASpace() {
-  const { user, isHost } = useAuth();
+  const { user, isHost, isAdmin, profile } = useAuth();
   const navigate = useNavigate();
 
   const [kind, setKind] = useState("Full lodge");
@@ -68,6 +68,14 @@ function ListASpace() {
       toast.error("Landlord or Agent account required", {
         description: "Full lodges can only be listed by registered landlords or agents. Switch your account or post a bedspace/takeover.",
       });
+      return;
+    }
+
+    if (isHost && !isAdmin && !profile?.verified) {
+      toast.info("Provider verification required", {
+        description: "Complete the verification application before listing a lodge.",
+      });
+      navigate({ to: "/verify-provider" });
       return;
     }
 
@@ -147,6 +155,13 @@ function ListASpace() {
 
         <section className="mx-auto max-w-3xl px-5 py-12">
           <form className="space-y-8" onSubmit={handleSubmit}>
+            {isHost && !isAdmin && !profile?.verified && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <p className="font-semibold text-amber-900 dark:text-amber-200">Verify your provider account before listing.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Landlords and agents submit ID, selfie, property proof, and a ₦3,500 payment for manual review.</p>
+                <Button asChild size="sm" className="mt-3"><Link to="/verify-provider">Start verification</Link></Button>
+              </div>
+            )}
             <div>
               <Label className="text-sm font-semibold">What are you listing?</Label>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -271,7 +286,7 @@ function ListASpace() {
               agent fees or deposits before a student has stood inside the space.
             </div>
 
-            <Button type="submit" size="lg" disabled={isSubmitting}>
+            <Button type="submit" size="lg" disabled={isSubmitting || (isHost && !isAdmin && !profile?.verified)}>
               {isSubmitting ? "Submitting space..." : "Submit for verification"}
             </Button>
           </form>

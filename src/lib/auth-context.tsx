@@ -45,12 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabaseConfigured = isSupabaseConfigured();
 
-  const load = async (userId: string | undefined) => {
-    if (!userId) {
+  const load = async (user: User | null | undefined) => {
+    if (!user) {
       setProfile(null);
       setRoles([]);
       return;
     }
+    const userId = user.id;
 
     // Check if there was a pending OAuth signup role stored before redirect
     if (typeof window !== "undefined") {
@@ -69,6 +70,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           window.localStorage.removeItem("lodgemate_pending_provider");
         }
       }
+    }
+
+    // Email signups that required confirmation may not have had a session
+    // when the signup form first ran. Reconcile the intended provider role
+    // from the confirmed user's metadata on their next authenticated load.
+    const metadata = user.user_metadata ?? {};
+    const metadataProvider = metadata.provider_type;
+    const metadataRole = metadata.role;
+    const intendedRole =
+      metadataRole === "landlord" || metadataProvider === "agent" || metadataProvider === "landlord"
+        ? "landlord"
+        : metadataRole === "student"
+          ? "student"
+          : null;
+
+    if (intendedRole) {
+      const { error } = await supabase.rpc("sync_user_signup_role", {
+        _role: intendedRole,
+        _provider_type:
+          intendedRole === "landlord" && (metadataProvider === "agent" || metadataProvider === "landlord")
+            ? metadataProvider
+            : null,
+      });
+      if (error) console.warn("Could not sync signup role:", error.message);
     }
 
     let profileData: Profile | null = null;
@@ -117,13 +142,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       if (!active) return;
       setSession(next);
-      void load(next?.user.id);
+      void load(next?.user);
     });
 
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return;
       setSession(data.session);
-      await load(data.session?.user.id);
+      await load(data.session?.user);
       setLoading(false);
     });
 
@@ -151,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLandlord: roles.includes("landlord"),
       providerType,
       refresh: async () => {
-        await load(session?.user.id);
+        await load(session?.user);
       },
       signOut: async () => {
         if (supabaseConfigured) await supabase.auth.signOut();

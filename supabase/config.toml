@@ -1,1 +1,5 @@
 project_id = "ghazkfgexrwkbzpqbqyg"
+
+[auth.email]
+# Planning-stage signup: create users without requiring an email confirmation link.
+enable_confirmations = false

@@ -216,7 +216,7 @@ export function Auth() {
     setIsModalOpen(false);
   };
 
-  const afterAuth = () => {
+  const afterAuth = async () => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("lodgemate_pending_return_to");
     }
@@ -236,8 +236,55 @@ export function Auth() {
       return;
     }
 
+    // Route by the account's actual saved role. The form's selected role is
+    // only a signup preference and defaults to Student on a fresh visit.
+    let accountRole: "student" | "landlord" | "admin" | null = null;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (user) {
+        const metadata = user.user_metadata ?? {};
+        const metadataProvider = metadata.provider_type;
+        const metadataRole = metadata.role;
+        const intendedRole =
+          metadataRole === "landlord" || metadataProvider === "agent" || metadataProvider === "landlord"
+            ? "landlord"
+            : metadataRole === "student"
+              ? "student"
+              : null;
+
+        if (intendedRole) {
+          await supabase.rpc("sync_user_signup_role", {
+            _role: intendedRole,
+            _provider_type:
+              intendedRole === "landlord" &&
+              (metadataProvider === "agent" || metadataProvider === "landlord")
+                ? metadataProvider
+                : null,
+          });
+        }
+
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        const roles = (roleRows ?? []).map((row) => row.role);
+        accountRole = roles.includes("admin")
+          ? "admin"
+          : roles.includes("landlord") || intendedRole === "landlord"
+            ? "landlord"
+            : roles.includes("student") || intendedRole === "student"
+              ? "student"
+              : null;
+      }
+    } catch (err) {
+      console.warn("Could not resolve account role after sign-in:", err);
+    }
+
     // 3. Role-based fallback
-    if (role === "landlord") {
+    if (accountRole === "admin") {
+      navigate({ to: "/admin" });
+    } else if (accountRole === "landlord" || (!accountRole && role === "landlord")) {
       navigate({ to: "/host" });
     } else {
       navigate({ to: "/dashboard" });

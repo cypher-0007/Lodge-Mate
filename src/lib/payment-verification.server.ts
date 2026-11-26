@@ -21,6 +21,7 @@ export type VerifiedPaymentResult = {
   success: boolean;
   reference: string;
   amountNgn: number;
+  amountKobo?: number;
   currency: string;
   provider: PaymentProvider;
   customerEmail?: string;
@@ -86,6 +87,7 @@ async function verifyPaystack(reference: string): Promise<VerifiedPaymentResult>
       success: true,
       reference: body.data.reference || reference,
       amountNgn,
+      amountKobo,
       currency: "NGN",
       provider: "paystack",
       customerEmail: body.data.customer?.email,
@@ -163,6 +165,7 @@ async function verifyFlutterwave(reference: string): Promise<VerifiedPaymentResu
       success: true,
       reference: body.data.tx_ref || reference,
       amountNgn,
+      amountKobo: Math.round(amountNgn * 100),
       currency: "NGN",
       provider: "flutterwave",
       customerEmail: body.data.customer?.email,

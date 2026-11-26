@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { DashboardShell, Panel, StatusPill } from "@/components/dashboard-shell";
+import { ProviderVerificationReviewPanel } from "@/components/provider-verification-review-panel";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type AppRole } from "@/lib/auth-context";
@@ -141,6 +142,8 @@ function AdminConsole() {
       subtitle="Verify listings, manage roles and accounts, review inspections and act on reports."
     >
       <div className="space-y-6">
+        <ProviderVerificationReviewPanel />
+
         <Panel title="Listings" description="Approve to publish and mark verified, or take a listing down.">
           {listings.data && listings.data.length > 0 ? (
             <ul className="space-y-3">
