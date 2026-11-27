@@ -415,7 +415,10 @@ export function Auth() {
     // Persist intended role so callback trigger can apply it
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lodgemate_pending_role", role);
-      window.localStorage.setItem("lodgemate_pending_provider", providerType);
+      window.localStorage.setItem(
+        "lodgemate_pending_provider",
+        role === "landlord" ? providerType : ""
+      );
       const intentRaw = window.sessionStorage.getItem("lodgemate_auth_intent");
       if (intentRaw) {
         window.localStorage.setItem("lodgemate_auth_intent_backup", intentRaw);

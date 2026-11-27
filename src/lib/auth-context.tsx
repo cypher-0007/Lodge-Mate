@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (user.app_metadata?.provider && user.app_metadata.provider !== "email") {
             await supabase.rpc("sync_user_signup_role", {
               _role: pendingRole,
-              _provider_type: pendingProvider ?? null,
+              _provider_type: pendingRole === "landlord" ? pendingProvider ?? null : null,
             });
           }
         } catch {
