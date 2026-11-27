@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/verify-provider")({
   head: () => ({
     meta: [
       { title: "Provider Verification — LodgeMate" },
-      { name: "description", content: "Verify your LodgeMate landlord or agent profile." },
+      { name: "description", content: "Submit your LodgeMate landlord or agent profile for verification." },
     ],
   }),
   component: ProviderVerificationPage,
@@ -27,13 +27,6 @@ export const Route = createFileRoute("/_authenticated/verify-provider")({
 
 type EvidenceKind = "id" | "selfie" | "property";
 type EvidenceFiles = Record<EvidenceKind, File | null>;
-
-function normalizeNigerianPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.startsWith("234")) return `+${digits}`;
-  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
-  return `+234${digits}`;
-}
 
 function loadPaystack(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -56,15 +49,9 @@ function loadPaystack(): Promise<void> {
 }
 
 function ProviderVerificationPage() {
-  const { user, profile, providerType, refresh } = useAuth();
+  const { user, profile, providerType } = useAuth();
   const queryClient = useQueryClient();
   const [evidence, setEvidence] = useState<EvidenceFiles>({ id: null, selfie: null, property: null });
-  const [phoneInput, setPhoneInput] = useState(profile?.phone ?? "");
-  const [phoneOtp, setPhoneOtp] = useState("");
-  const [pendingPhone, setPendingPhone] = useState("");
-  const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false);
-  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
-  const [phoneVerifiedLocally, setPhoneVerifiedLocally] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -88,8 +75,6 @@ function ProviderVerificationPage() {
   const request = requestQuery.data;
   const accountProvider = providerType === "agent" ? "agent" : providerType === "landlord" ? "landlord" : null;
   const emailVerified = Boolean(user?.email_confirmed_at);
-  const phoneVerified = phoneVerifiedLocally || Boolean(user?.phone_confirmed_at && user?.phone);
-
   const sendEmailConfirmation = async () => {
     if (!user?.email) return;
     setIsSendingEmail(true);
@@ -103,56 +88,6 @@ function ProviderVerificationPage() {
     else toast.success("Confirmation email sent", { description: "Open the link, then return here and refresh." });
   };
 
-  const sendPhoneCode = async () => {
-    const normalized = normalizeNigerianPhone(phoneInput.trim());
-    if (!/^\+234\d{10}$/.test(normalized)) {
-      toast.error("Enter a valid Nigerian phone number.");
-      return;
-    }
-    setIsSendingPhoneCode(true);
-    const { error } = await supabase.auth.updateUser({ phone: normalized });
-    setIsSendingPhoneCode(false);
-    if (error) {
-      toast.error("Could not send the SMS code", { description: error.message });
-      return;
-    }
-    setPendingPhone(normalized);
-    toast.success("Phone code sent", { description: `Check ${normalized} for the verification code.` });
-  };
-
-  const verifyPhoneCode = async () => {
-    if (!pendingPhone || phoneOtp.trim().length < 4) {
-      toast.error("Enter the SMS code we sent you.");
-      return;
-    }
-    setIsVerifyingPhone(true);
-    const { error } = await supabase.auth.verifyOtp({
-      phone: pendingPhone,
-      token: phoneOtp.trim(),
-      type: "phone_change",
-    });
-    if (!error) {
-      const { error: profileError } = await (supabase as any)
-        .from("profiles")
-        .update({ phone: phoneInput.trim() })
-        .eq("id", user?.id);
-      if (profileError) {
-        setIsVerifyingPhone(false);
-        toast.error("Phone was verified, but the profile could not be updated.", { description: profileError.message });
-        return;
-      }
-      setPhoneVerifiedLocally(true);
-      await refresh();
-      await queryClient.invalidateQueries({ queryKey: ["provider-verification-request"] });
-    }
-    setIsVerifyingPhone(false);
-    if (error) toast.error(error.message);
-    else {
-      setPendingPhone("");
-      setPhoneOtp("");
-      toast.success("Phone number verified");
-    }
-  };
 
   const uploadEvidence = async (requestId: string, kind: EvidenceKind, file: File) => {
     const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
@@ -173,11 +108,6 @@ function ProviderVerificationPage() {
       toast.error("Verify your email before continuing.");
       return;
     }
-    if (!phoneVerified) {
-      toast.error("Verify your phone number before continuing.");
-      return;
-    }
-
     const isResuming = request?.status === "awaiting_payment";
     if (!isResuming && (!evidence.id || !evidence.selfie || !evidence.property)) {
       toast.error("Upload your ID, a clear selfie, and property ownership or authorization proof.");
@@ -276,7 +206,7 @@ function ProviderVerificationPage() {
   return (
     <DashboardShell
       title="Get your provider badge"
-      subtitle="Verify your contact details and submit documents for manual review."
+      subtitle="Confirm your email and submit documents for manual review."
       badge={accountProvider === "agent" ? "Independent Agent" : "Landlord"}
     >
       <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
@@ -294,7 +224,7 @@ function ProviderVerificationPage() {
 
           {request?.status !== "in_review" && request?.status !== "approved" && (
             <>
-              <Panel title="1. Confirm your contact details" description="These checks confirm that you control the email address and phone number on your LodgeMate account.">
+              <Panel title="1. Confirm your email" description="Confirm your email address on your LodgeMate account before applying.">
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
                     <div>
@@ -302,23 +232,6 @@ function ProviderVerificationPage() {
                       <p className="mt-1 text-xs text-muted-foreground">{emailVerified ? "Confirmed on your account" : "Needs confirmation"}</p>
                     </div>
                     {emailVerified ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Button variant="outline" onClick={() => void sendEmailConfirmation()} disabled={isSendingEmail}>{isSendingEmail ? "Sending…" : "Resend confirmation"}</Button>}
-                  </div>
-                  <div className="space-y-2 rounded-xl border border-border p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="provider-phone">Phone number</Label>
-                      {phoneVerified && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Verified</span>}
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Input id="provider-phone" type="tel" value={phoneInput} onChange={(event) => setPhoneInput(event.target.value)} disabled={phoneVerified} placeholder="0801 234 5678" />
-                      {!phoneVerified && <Button type="button" variant="outline" onClick={() => void sendPhoneCode()} disabled={isSendingPhoneCode}>{isSendingPhoneCode ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send SMS code"}</Button>}
-                    </div>
-                    {pendingPhone && (
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Input aria-label="SMS verification code" inputMode="numeric" value={phoneOtp} onChange={(event) => setPhoneOtp(event.target.value)} placeholder="Enter code" />
-                        <Button type="button" onClick={() => void verifyPhoneCode()} disabled={isVerifyingPhone}>{isVerifyingPhone ? "Verifying…" : "Verify phone"}</Button>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">SMS verification requires an SMS provider enabled in Supabase Auth.</p>
                   </div>
                 </div>
               </Panel>
@@ -341,7 +254,7 @@ function ProviderVerificationPage() {
                 </div>
               </div>
 
-              <Button className="w-full" disabled={isPaying || (!emailVerified || !phoneVerified)} onClick={() => void submitForReview()}>
+              <Button className="w-full" disabled={isPaying || !emailVerified} onClick={() => void submitForReview()}>
                 {isPaying ? <><Loader2 className="h-4 w-4 animate-spin" /> Waiting for Paystack…</> : request?.status === "awaiting_payment" ? "Resume ₦3,500 verification payment" : "Submit and pay ₦3,500"}
               </Button>
               {paymentError && <p role="alert" className="text-sm text-destructive">{paymentError}</p>}
@@ -352,7 +265,7 @@ function ProviderVerificationPage() {
         <div className="space-y-6">
           <Panel title="Verification steps">
             <ol className="space-y-3 text-sm text-muted-foreground">
-              <li className="flex gap-2"><CheckCircle2 className={`mt-0.5 h-4 w-4 ${emailVerified ? "text-emerald-600" : "text-muted-foreground"}`} /> Confirm email and phone.</li>
+              <li className="flex gap-2"><CheckCircle2 className={`mt-0.5 h-4 w-4 ${emailVerified ? "text-emerald-600" : "text-muted-foreground"}`} /> Confirm email.</li>
               <li className="flex gap-2"><UploadCloud className="mt-0.5 h-4 w-4" /> Upload ID, selfie, and property proof.</li>
               <li className="flex gap-2"><FileCheck2 className="mt-0.5 h-4 w-4" /> Pay ₦3,500 through Paystack.</li>
               <li className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4" /> LodgeMate manually reviews your application.</li>

@@ -13,13 +13,6 @@ function isOwnedEvidencePath(path: string, userId: string, requestId: string) {
   return path.startsWith(`${userId}/${requestId}/`) && !path.includes("..") && !path.startsWith("/");
 }
 
-function normalizePhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.startsWith("234")) return digits;
-  if (digits.startsWith("0")) return `234${digits.slice(1)}`;
-  return digits;
-}
-
 export async function createProviderVerificationCheckout({
   userId,
   requestId,
@@ -53,13 +46,9 @@ export async function createProviderVerificationCheckout({
   if (!authUser.email_confirmed_at) {
     return { success: false as const, error: "Verify your email before applying for provider verification." };
   }
-  if (!authUser.phone_confirmed_at || !authUser.phone) {
-    return { success: false as const, error: "Verify the phone number on your LodgeMate account before applying." };
-  }
-
   const { data: profile, error: profileError } = await (supabaseAdmin as any)
     .from("profiles")
-    .select("id, provider_type, banned, phone")
+    .select("id, provider_type, banned")
     .eq("id", userId)
     .maybeSingle();
 
@@ -72,10 +61,6 @@ export async function createProviderVerificationCheckout({
   if (profile.provider_type !== providerType) {
     return { success: false as const, error: "The selected provider type does not match your account." };
   }
-  if (!profile.phone || normalizePhone(profile.phone) !== normalizePhone(authUser.phone)) {
-    return { success: false as const, error: "Verify the same phone number that is saved on your LodgeMate profile." };
-  }
-
   const db = supabaseAdmin as any;
   const { data: activeRequest, error: activeError } = await db
     .from("provider_verification_requests")
