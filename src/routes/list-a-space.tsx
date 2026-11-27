@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BedDouble, Building2, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { ListingImageUpload, uploadListingPhotos, type ImageFileItem } from "@/components/listing-image-upload";
@@ -39,8 +39,12 @@ const kinds = [
 ];
 
 function ListASpace() {
-  const { user, isHost, isAdmin, profile } = useAuth();
+  const { user, isHost, isAdmin, profile, refresh } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.id) void refresh();
+  }, [user?.id]);
 
   const [kind, setKind] = useState("Full lodge");
   const [title, setTitle] = useState("");
