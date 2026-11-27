@@ -340,6 +340,9 @@ export function Auth() {
 
     try {
       if (mode === "signup") {
+        // OAuth role preferences must never carry over to an email signup.
+        window.localStorage.removeItem("lodgemate_pending_role");
+        window.localStorage.removeItem("lodgemate_pending_provider");
         const { data, error } = await supabase.auth.signUp({
           email: form.email.trim(),
           password: form.password,

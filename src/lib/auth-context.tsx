@@ -59,10 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const pendingProvider = window.localStorage.getItem("lodgemate_pending_provider") as ProviderType | null;
       if (pendingRole) {
         try {
-          await supabase.rpc("sync_user_signup_role", {
-            _role: pendingRole,
-            _provider_type: pendingProvider ?? null,
-          });
+          // Pending preferences are only for OAuth redirects. Email signup
+          // metadata is authoritative and must not be overridden by stale state.
+          if (user.app_metadata?.provider && user.app_metadata.provider !== "email") {
+            await supabase.rpc("sync_user_signup_role", {
+              _role: pendingRole,
+              _provider_type: pendingProvider ?? null,
+            });
+          }
         } catch {
           // ignore if rpc is not yet available
         } finally {
