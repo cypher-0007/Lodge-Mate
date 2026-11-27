@@ -41,16 +41,9 @@ export const Route = createFileRoute("/listings/$id")({
     action: typeof search["action"] === "string" ? search["action"] : undefined,
   }),
   loader: async ({ params }) => {
-    try {
-      const listing = await fetchListingById(params.id);
-      if (!listing) throw notFound();
-      return { listing };
-    } catch (err: any) {
-      if (err && (err.isNotFound || err.status === 404 || err.message === "Not Found")) {
-        throw notFound();
-      }
-      throw notFound();
-    }
+    const listing = await fetchListingById(params.id);
+    if (!listing) throw notFound();
+    return { listing };
   },
   notFoundComponent: ListingNotFound,
   errorComponent: ListingErrorComponent,
