@@ -383,7 +383,15 @@ export function Auth() {
           password: form.password,
         });
 
-        if (error) throw error;
+        if (error) {
+          const { data: isDeletedEmail } = await supabase.rpc("is_account_email_reserved", {
+            _email: form.email.trim().toLowerCase(),
+          });
+          if (isDeletedEmail === true) {
+            throw new Error("This account has been permanently deleted and cannot be used to sign in. Contact LodgeMate support if you believe this is a mistake.");
+          }
+          throw error;
+        }
         toast.success("Welcome back");
         afterAuth();
       }

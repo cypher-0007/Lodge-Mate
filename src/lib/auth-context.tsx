@@ -119,6 +119,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("Failed to retrieve profile data:", err);
     }
 
+    // An approved provider application is authoritative even if the profile
+    // verified flag was not synchronized by an older admin review path.
+    try {
+      const { data: approvedRequest, error: verificationError } = await (supabase as any)
+        .from("provider_verification_requests")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "approved")
+        .limit(1)
+        .maybeSingle();
+      if (!verificationError && approvedRequest && profileData) {
+        profileData = { ...profileData, verified: true };
+      }
+    } catch (err) {
+      console.warn("Failed to retrieve provider verification status:", err);
+    }
+
     let userRoles: AppRole[] = [];
     try {
       const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", userId);
