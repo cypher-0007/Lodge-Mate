@@ -29,6 +29,7 @@ export type Listing = {
   verified: boolean;
   amenities: string[];
   description: string;
+  availableRooms?: number;
   host: ListingHost;
   ownerId?: string;
   isBeta?: boolean;
@@ -193,6 +194,7 @@ type DatabaseListingRow = {
   verified: boolean;
   status: string;
   is_beta?: boolean;
+  available_rooms?: number;
   created_at: string;
   profiles?: {
     full_name: string | null;
@@ -239,6 +241,7 @@ export function transformDatabaseListing(row: DatabaseListingRow): Listing {
     verified: Boolean(row.verified),
     amenities: Array.isArray(row.amenities) ? row.amenities : [],
     description: row.description || "No description provided.",
+    availableRooms: Math.max(0, Number(row.available_rooms) || 1),
     ownerId: row.owner_id,
     isBeta: Boolean(row.is_beta),
     createdAt: row.created_at,

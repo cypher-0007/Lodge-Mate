@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { uploadOwnershipProof } from "@/lib/ownership-proof";
 
 export const Route = createFileRoute("/_authenticated/host")({
   head: () => ({
@@ -60,6 +61,7 @@ const emptyForm = {
   period: "per year",
   description: "",
   amenities: "",
+  availableRooms: "1",
 };
 
 type FormState = typeof emptyForm;
@@ -80,6 +82,8 @@ type HostListing = {
   status: string;
   verified: boolean;
   created_at: string;
+  available_rooms: number;
+  ownership_proof_path: string | null;
 };
 
 function HostPanel() {
@@ -89,6 +93,8 @@ function HostPanel() {
   // ── Create form state ──────────────────────────────────────────────────────
   const [form, setForm] = useState<FormState>(emptyForm);
   const [createImages, setCreateImages] = useState<ImageFileItem[]>([]);
+  const [ownershipProofFile, setOwnershipProofFile] = useState<File | null>(null);
+  const [editOwnershipProofFile, setEditOwnershipProofFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   // ── Edit dialog state ──────────────────────────────────────────────────────
@@ -178,6 +184,22 @@ function HostPanel() {
       }
     }
 
+    let ownership_proof_path: string | null = null;
+    if (providerType === "landlord") {
+      if (!ownershipProofFile) {
+        setBusy(false);
+        toast.error("Ownership proof required", { description: "Upload proof for this specific lodge before submitting." });
+        return;
+      }
+      try {
+        ownership_proof_path = await uploadOwnershipProof(ownershipProofFile, user.id);
+      } catch (err) {
+        setBusy(false);
+        toast.error("Could not upload ownership proof", { description: err instanceof Error ? err.message : "Try again." });
+        return;
+      }
+    }
+
     const { error } = await supabase.from("listings").insert({
       owner_id: user.id,
       title: form.title,
@@ -186,6 +208,8 @@ function HostPanel() {
       area: form.area,
       distance: form.distance,
       price: Number(form.price) || 0,
+      available_rooms: Number(form.availableRooms) || 1,
+      ownership_proof_path,
       period: form.period,
       description: form.description,
       amenities: form.amenities
@@ -205,11 +229,13 @@ function HostPanel() {
     toast.success("Listing submitted", { description: "It goes live once an admin approves it." });
     setForm(emptyForm);
     setCreateImages([]);
+    setOwnershipProofFile(null);
     void qc.invalidateQueries({ queryKey: ["host-listings"] });
   };
 
   // ── Open Edit dialog ───────────────────────────────────────────────────────
   const openEdit = (l: HostListing) => {
+    setEditOwnershipProofFile(null);
     setEditingListing(l);
     setEditForm({
       title: l.title ?? "",
@@ -221,6 +247,7 @@ function HostPanel() {
       period: l.period ?? "per year",
       description: l.description ?? "",
       amenities: Array.isArray(l.amenities) ? l.amenities.join(", ") : "",
+      availableRooms: String(l.available_rooms ?? 1),
     });
     // Seed existing image if present
     if (l.image_url) {
@@ -244,6 +271,22 @@ function HostPanel() {
     setEditBusy(true);
 
     let image_url: string | null = editingListing.image_url ?? null;
+    let ownership_proof_path = editingListing.ownership_proof_path;
+
+    if (providerType === "landlord" && (!ownership_proof_path || editOwnershipProofFile)) {
+      if (!editOwnershipProofFile) {
+        setEditBusy(false);
+        toast.error("Ownership proof required", { description: "Upload proof for this lodge before saving." });
+        return;
+      }
+      try {
+        ownership_proof_path = await uploadOwnershipProof(editOwnershipProofFile, user.id);
+      } catch (err) {
+        setEditBusy(false);
+        toast.error("Could not upload ownership proof", { description: err instanceof Error ? err.message : "Try again." });
+        return;
+      }
+    }
 
     // Upload new photo if the user selected one
     const hasNewFiles = editImages.some((img) => !img.isExisting);
@@ -272,6 +315,8 @@ function HostPanel() {
         area: editForm.area,
         distance: editForm.distance,
         price: Number(editForm.price) || 0,
+        available_rooms: Number(editForm.availableRooms) || 1,
+        ownership_proof_path,
         period: editForm.period,
         description: editForm.description,
         amenities: editForm.amenities
@@ -421,7 +466,7 @@ function HostPanel() {
       >
         <div className="grid gap-6 lg:grid-cols-2">
           {/* ── Post a room ─────────────────────────────────────────────── */}
-          <Panel title="Post a room" description="Submitted rooms are reviewed before they go live.">
+          <Panel title="Add a lodge listing" description="Create a listing for each lodge you manage, set how many rooms are available, and submit proof for each property.">
             <form className="space-y-4" onSubmit={create}>
               <div>
                 <Label htmlFor="title">Title</Label>
@@ -435,7 +480,7 @@ function HostPanel() {
                     className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     {...createField("kind")}
                   >
-                    <option>Full lodge</option>
+                    <option value="Full lodge">Rooms / units in a lodge</option>
                     <option>Bedspace</option>
                     <option>Takeover</option>
                   </select>
@@ -467,7 +512,18 @@ function HostPanel() {
                   <Label htmlFor="period">Period</Label>
                   <Input id="period" className="mt-2" placeholder="per year" {...createField("period")} />
                 </div>
+                <div>
+                  <Label htmlFor="availableRooms">Rooms available in this lodge</Label>
+                  <Input id="availableRooms" className="mt-2" type="number" min={1} step={1} required {...createField("availableRooms")} />
+                </div>
               </div>
+              {providerType === "landlord" && (
+                <div>
+                  <Label htmlFor="ownership-proof">Proof of ownership for this lodge</Label>
+                  <Input id="ownership-proof" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={(event) => setOwnershipProofFile(event.target.files?.[0] ?? null)} />
+                  <p className="mt-1 text-xs text-muted-foreground">Private to you and LodgeMate reviewers. Upload proof for each lodge you list (max 10 MB).</p>
+                </div>
+              )}
               <div>
                 <Label htmlFor="amenities">Amenities (comma separated)</Label>
                 <Input
@@ -526,6 +582,7 @@ function HostPanel() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <p className="truncate font-medium text-sm">{l.title}</p>
+                                <p className="text-xs text-muted-foreground">{l.available_rooms} {l.available_rooms === 1 ? "room" : "rooms"} available · {l.ownership_proof_path ? "ownership proof submitted" : "no lodge proof on file"}</p>
                                 <p className="text-xs text-muted-foreground">
                                   {l.school} · {l.area} · ₦{l.price.toLocaleString()} {l.period}
                                 </p>
@@ -699,6 +756,10 @@ function HostPanel() {
                 </select>
               </div>
               <div>
+                <Label htmlFor="edit-available-rooms">Rooms available in this lodge</Label>
+                <Input id="edit-available-rooms" className="mt-2" type="number" min={1} step={1} required {...editField("availableRooms")} />
+              </div>
+              <div>
                 <Label htmlFor="edit-school">School</Label>
                 <select
                   id="edit-school"
@@ -709,6 +770,7 @@ function HostPanel() {
                   <option value="ABSU">ABSU (Uturu)</option>
                 </select>
               </div>
+
               <div>
                 <Label htmlFor="edit-area">Area</Label>
                 <Input id="edit-area" className="mt-2" placeholder="Ishiagu, Umudike…" {...editField("area")} />
@@ -739,6 +801,13 @@ function HostPanel() {
               <Label htmlFor="edit-description">Description</Label>
               <Textarea id="edit-description" className="mt-2" rows={4} {...editField("description")} />
             </div>
+
+            {providerType === "landlord" && (
+              <div>
+                <Label htmlFor="edit-ownership-proof">{editingListing?.ownership_proof_path ? "Replace lodge ownership proof (optional)" : "Proof of ownership for this lodge"}</Label>
+                <Input id="edit-ownership-proof" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required={!editingListing?.ownership_proof_path} onChange={(event) => setEditOwnershipProofFile(event.target.files?.[0] ?? null)} />
+              </div>
+            )}
 
             {/* Photo upload */}
             <div>

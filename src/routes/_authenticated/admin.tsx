@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useState } from "react";
 
 import { DashboardShell, Panel, StatusPill } from "@/components/dashboard-shell";
 import { ProviderVerificationReviewPanel } from "@/components/provider-verification-review-panel";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type AppRole } from "@/lib/auth-context";
+import { ADMIN_WARNING_TEMPLATES } from "@/lib/moderation";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 function AdminConsole() {
   const { isAdmin, loading } = useAuth();
   const qc = useQueryClient();
+  const [ownershipProofLinks, setOwnershipProofLinks] = useState<Record<string, string>>({});
 
   const listings = useQuery({
     queryKey: ["admin-listings"],
@@ -114,6 +117,24 @@ function AdminConsole() {
   const setBanned = (userId: string, banned: boolean) =>
     run(supabase.from("profiles").update({ banned }).eq("id", userId), ["admin-users"]);
 
+  const copyWarning = async (message: string) => {
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success("Warning copied", { description: "Personalize it before sending to the user." });
+    } catch {
+      toast.error("Could not copy warning", { description: "Select and copy the message manually." });
+    }
+  };
+
+  const openOwnershipProof = async (listingId: string, path: string) => {
+    const { data, error } = await supabase.storage.from("lodge-ownership-proofs").createSignedUrl(path, 5 * 60);
+    if (error) {
+      toast.error("Could not open ownership proof", { description: error.message });
+      return;
+    }
+    setOwnershipProofLinks((links) => ({ ...links, [listingId]: data.signedUrl }));
+  };
+
   if (loading) {
     return (
       <DashboardShell title="Admin console" subtitle="Checking your permissions…">
@@ -144,6 +165,18 @@ function AdminConsole() {
       <div className="space-y-6">
         <ProviderVerificationReviewPanel />
 
+        <Panel title="Warning message templates" description="Copy a template, personalize it, and send it through your usual support channel.">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ADMIN_WARNING_TEMPLATES.map((template) => (
+              <div key={template.title} className="rounded-xl border border-border p-4">
+                <p className="font-medium">{template.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{template.message}</p>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => void copyWarning(template.message)}>Copy message</Button>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
         <Panel title="Listings" description="Approve to publish and mark verified, or take a listing down.">
           {listings.data && listings.data.length > 0 ? (
             <ul className="space-y-3">
@@ -159,6 +192,13 @@ function AdminConsole() {
                     <StatusPill status={l.status} />
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    {l.ownership_proof_path && (
+                      ownershipProofLinks[l.id] ? (
+                        <a className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-accent" href={ownershipProofLinks[l.id]} target="_blank" rel="noreferrer">Open ownership proof</a>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={() => void openOwnershipProof(l.id, l.ownership_proof_path!)}>Review ownership proof</Button>
+                      )
+                    )}
                     <Button size="sm" onClick={() => setStatus(l.id, "approved")}>
                       Approve & verify
                     </Button>

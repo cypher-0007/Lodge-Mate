@@ -174,6 +174,7 @@ export type Database = {
       }
       listings: {
         Row: {
+          available_rooms: number
           amenities: string[]
           area: string
           beta_status: Database["public"]["Enums"]["beta_approval_status"]
@@ -186,6 +187,7 @@ export type Database = {
           is_beta: boolean
           kind: string
           owner_id: string
+          ownership_proof_path: string | null
           period: string
           price: number
           provider_phone: string | null
@@ -197,6 +199,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          available_rooms?: number
           amenities?: string[]
           area?: string
           beta_status?: Database["public"]["Enums"]["beta_approval_status"]
@@ -209,6 +212,7 @@ export type Database = {
           is_beta?: boolean
           kind?: string
           owner_id: string
+          ownership_proof_path?: string | null
           period?: string
           price?: number
           provider_phone?: string | null
@@ -220,6 +224,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          available_rooms?: number
           amenities?: string[]
           area?: string
           beta_status?: Database["public"]["Enums"]["beta_approval_status"]
@@ -232,6 +237,7 @@ export type Database = {
           is_beta?: boolean
           kind?: string
           owner_id?: string
+          ownership_proof_path?: string | null
           period?: string
           price?: number
           provider_phone?: string | null

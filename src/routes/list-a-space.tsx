@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { uploadOwnershipProof } from "@/lib/ownership-proof";
 
 export const Route = createFileRoute("/list-a-space")({
   head: () => ({
@@ -33,13 +34,13 @@ export const Route = createFileRoute("/list-a-space")({
 });
 
 const kinds = [
-  { icon: Building2, label: "Full lodge", hint: "Self-con, apartment or hostel room" },
-  { icon: BedDouble, label: "Bedspace", hint: "A space in a shared room" },
-  { icon: Users, label: "Takeover", hint: "Transfer months left on your tenancy" },
+  { icon: Building2, value: "Full lodge", label: "Room(s) in a lodge", hint: "Self-con, apartment or hostel units" },
+  { icon: BedDouble, value: "Bedspace", label: "Bedspace", hint: "A space in a shared room" },
+  { icon: Users, value: "Takeover", label: "Takeover", hint: "Transfer months left on your tenancy" },
 ];
 
 function ListASpace() {
-  const { user, isHost, isAdmin, profile, refresh } = useAuth();
+  const { user, isHost, isAdmin, profile, providerType, refresh } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,6 +52,8 @@ function ListASpace() {
   const [school, setSchool] = useState("MOUAU");
   const [area, setArea] = useState("");
   const [price, setPrice] = useState("");
+  const [availableRooms, setAvailableRooms] = useState("1");
+  const [ownershipProofFile, setOwnershipProofFile] = useState<File | null>(null);
   const [period, setPeriod] = useState("per year");
   const [amenities, setAmenities] = useState("");
   const [description, setDescription] = useState("");
@@ -110,6 +113,12 @@ function ListASpace() {
         }
       }
 
+      let ownership_proof_path: string | null = null;
+      if (providerType === "landlord") {
+        if (!ownershipProofFile) throw new Error("Upload proof of ownership for this lodge before submitting.");
+        ownership_proof_path = await uploadOwnershipProof(ownershipProofFile, user.id);
+      }
+
       const { error } = await supabase.from("listings").insert({
         owner_id: user.id,
         title: title.trim(),
@@ -117,6 +126,8 @@ function ListASpace() {
         school,
         area: area.trim(),
         price: Number(price) || 0,
+        available_rooms: Math.max(1, Number(availableRooms) || 1),
+        ownership_proof_path,
         period: period.trim(),
         amenities: amenitiesList,
         description: description.trim(),
@@ -171,9 +182,9 @@ function ListASpace() {
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {kinds.map((k) => (
                   <button
-                    key={k.label}
+                    key={k.value}
                     type="button"
-                    onClick={() => setKind(k.label)}
+                    onClick={() => setKind(k.value)}
                     className={`rounded-2xl border p-4 text-left transition-colors ${
                       kind === k.label
                         ? "border-primary bg-accent"
@@ -239,6 +250,10 @@ function ListASpace() {
                   required
                 />
               </div>
+              <div>
+                <Label htmlFor="availableRooms">Rooms available in this lodge</Label>
+                <Input id="availableRooms" type="number" min={1} step={1} className="mt-2" value={availableRooms} onChange={(e) => setAvailableRooms(e.target.value)} required />
+              </div>
 
               <div>
                 <Label htmlFor="period">Period</Label>
@@ -275,6 +290,14 @@ function ListASpace() {
                 />
               </div>
             </div>
+
+            {isHost && providerType === "landlord" && (
+              <div>
+                <Label htmlFor="ownership-proof">Proof of ownership for this lodge</Label>
+                <Input id="ownership-proof" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={(event) => setOwnershipProofFile(event.target.files?.[0] ?? null)} />
+                <p className="mt-1 text-xs text-muted-foreground">Submit proof separately for each lodge you list. Only LodgeMate reviewers can view this file (max 10 MB).</p>
+              </div>
+            )}
 
             {/* Photo upload */}
             <div>

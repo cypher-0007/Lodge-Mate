@@ -57,6 +57,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useSavedListingsQuery, useToggleSaveListing } from "@/lib/saved-listings";
 import { useBetaLodgesConfig, useUserBetaAccess, useUserBetaPass } from "@/lib/beta-lodges";
 import { getFallbackImage } from "@/lib/listings";
+import { REPORT_REASONS } from "@/lib/moderation";
 import { consumeMessageIntent, getOrCreateConversation, getSafeReturnUrl } from "@/lib/messaging";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -159,6 +160,7 @@ function StudentDashboard() {
   // Reporting Modal States
   const [reportListing, setReportListing] = useState<{ id: string; title: string } | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   // Shared Spaces Management States (Edit & Delete)
@@ -415,7 +417,7 @@ function StudentDashboard() {
       const { error } = await supabase.from("reports").insert({
         listing_id: reportListing.id,
         reporter_id: user.id,
-        reason: reportReason.trim(),
+        reason: `${reportReason}${reportDetails.trim() ? ` — ${reportDetails.trim()}` : ""}`,
       });
 
       if (error) throw error;
@@ -1364,6 +1366,7 @@ function StudentDashboard() {
           if (!open) {
             setReportListing(null);
             setReportReason("");
+            setReportDetails("");
           }
         }}
       >
@@ -1382,15 +1385,16 @@ function StudentDashboard() {
               <Label htmlFor="dashboardReportReason" className="text-xs font-semibold">
                 Reason for report <span className="text-destructive">*</span>
               </Label>
-              <Textarea
-                id="dashboardReportReason"
-                className="mt-1.5 text-xs"
-                rows={4}
-                placeholder="e.g. Unreachable landlord, incorrect pricing, room already occupied, or safety concern."
-                value={reportReason}
-                onChange={(e) => setReportReason(e.target.value)}
-                required
-              />
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger id="dashboardReportReason" className="mt-1.5 text-xs">
+                  <SelectValue placeholder="Choose a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_REASONS.map((reason) => <SelectItem key={reason} value={reason}>{reason}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Label htmlFor="dashboardReportDetails" className="mt-3 block text-xs font-semibold">Additional details (optional)</Label>
+              <Textarea id="dashboardReportDetails" className="mt-1.5 text-xs" rows={3} placeholder="Share any helpful details for our review." value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} />
             </div>
 
             <DialogFooter className="mt-4 flex gap-2">
@@ -1400,6 +1404,7 @@ function StudentDashboard() {
                 onClick={() => {
                   setReportListing(null);
                   setReportReason("");
+                  setReportDetails("");
                 }}
                 className="rounded-xl text-xs"
               >
@@ -1408,7 +1413,7 @@ function StudentDashboard() {
               <Button
                 type="submit"
                 variant="destructive"
-                disabled={isSubmittingReport || !reportReason.trim()}
+                disabled={isSubmittingReport || !reportReason}
                 className="rounded-xl text-xs font-semibold"
               >
                 {isSubmittingReport ? "Submitting…" : "Submit Report"}

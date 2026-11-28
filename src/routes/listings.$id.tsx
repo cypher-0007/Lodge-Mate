@@ -34,6 +34,7 @@ import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { fetchListingById, getFallbackImage, isLocalDevPreview } from "@/lib/listings";
 import { getOrCreateConversation, saveInspectionIntent, saveMessageIntent } from "@/lib/messaging";
+import { REPORT_REASONS } from "@/lib/moderation";
 import { triggerGuestBookmarkPrompt, useSavedListingIds, useToggleSaveListing } from "@/lib/saved-listings";
 
 export const Route = createFileRoute("/listings/$id")({
@@ -129,6 +130,7 @@ function ListingDetail() {
   // Report Modal State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const handleBookInspectionClick = () => {
@@ -259,13 +261,15 @@ function ListingDetail() {
       navigate({ to: "/auth" });
       return;
     }
-    if (!reportReason.trim()) return;
+    if (!reportReason) return;
 
     if (!isSupabaseConfigured()) {
       toast.success("Report submitted (demo mode)", {
         description: "Our moderation team will review this listing.",
       });
       setIsReportOpen(false);
+      setReportReason("");
+      setReportDetails("");
       return;
     }
 
@@ -274,7 +278,7 @@ function ListingDetail() {
       const { error } = await supabase.from("reports").insert({
         listing_id: l.id,
         reporter_id: user.id,
-        reason: reportReason.trim(),
+        reason: `${reportReason}${reportDetails.trim() ? ` — ${reportDetails.trim()}` : ""}`,
       });
 
       if (error) throw error;
@@ -284,6 +288,7 @@ function ListingDetail() {
       });
       setIsReportOpen(false);
       setReportReason("");
+      setReportDetails("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to submit report");
     } finally {
@@ -429,6 +434,11 @@ function ListingDetail() {
               </div>
 
               <div className="mt-6 space-y-2.5">
+                {typeof l.availableRooms === "number" && (
+                  <p className="rounded-lg bg-secondary/60 px-3 py-2 text-sm font-medium text-secondary-foreground">
+                    {l.availableRooms} {l.availableRooms === 1 ? "room" : "rooms"} currently available
+                  </p>
+                )}
                 <Button
                   className="w-full h-11 gap-2 rounded-xl text-xs font-semibold shadow-xs"
                   size="lg"
@@ -608,15 +618,12 @@ function ListingDetail() {
               <Label htmlFor="reportReason" className="text-xs font-semibold">
                 Reason for report
               </Label>
-              <Textarea
-                id="reportReason"
-                className="mt-1.5 text-xs"
-                rows={4}
-                placeholder="e.g. Unreachable landlord, incorrect price, or room already taken."
-                value={reportReason}
-                onChange={(e) => setReportReason(e.target.value)}
-                required
-              />
+              <Select value={reportReason} onValueChange={setReportReason}>
+                <SelectTrigger id="reportReason" className="mt-1.5 text-xs"><SelectValue placeholder="Choose a reason" /></SelectTrigger>
+                <SelectContent>{REPORT_REASONS.map((reason) => <SelectItem key={reason} value={reason}>{reason}</SelectItem>)}</SelectContent>
+              </Select>
+              <Label htmlFor="reportDetails" className="mt-3 block text-xs font-semibold">Additional details (optional)</Label>
+              <Textarea id="reportDetails" className="mt-1.5 text-xs" rows={3} placeholder="Share any helpful details for our review." value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} />
             </div>
 
             <DialogFooter className="mt-4 flex gap-2">
@@ -631,7 +638,7 @@ function ListingDetail() {
               <Button
                 type="submit"
                 variant="destructive"
-                disabled={isSubmittingReport}
+                disabled={isSubmittingReport || !reportReason}
                 className="rounded-xl text-xs font-semibold"
               >
                 {isSubmittingReport ? "Submitting..." : "Send Report"}

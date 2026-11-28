@@ -115,6 +115,12 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
             </Link>
           </h3>
 
+          {typeof l.availableRooms === "number" && (
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
+              {l.availableRooms} {l.availableRooms === 1 ? "room" : "rooms"} available
+            </p>
+          )}
+
           <div className="mt-3 flex flex-wrap gap-1.5">
             {l.amenities.slice(0, 3).map((a) => (
               <span
