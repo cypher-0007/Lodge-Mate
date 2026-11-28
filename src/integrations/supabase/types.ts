@@ -183,6 +183,7 @@ export type Database = {
           distance: string
           id: string
           image_url: string | null
+          lodge_profile_id: string | null
           inspection_notes: string | null
           is_beta: boolean
           kind: string
@@ -190,6 +191,8 @@ export type Database = {
           ownership_proof_path: string | null
           period: string
           price: number
+          room_image_urls: string[]
+          room_location: string | null
           provider_phone: string | null
           school: string
           status: Database["public"]["Enums"]["listing_status"]
@@ -208,6 +211,7 @@ export type Database = {
           distance?: string
           id?: string
           image_url?: string | null
+          lodge_profile_id?: string | null
           inspection_notes?: string | null
           is_beta?: boolean
           kind?: string
@@ -215,6 +219,8 @@ export type Database = {
           ownership_proof_path?: string | null
           period?: string
           price?: number
+          room_image_urls?: string[]
+          room_location?: string | null
           provider_phone?: string | null
           school?: string
           status?: Database["public"]["Enums"]["listing_status"]
@@ -233,6 +239,7 @@ export type Database = {
           distance?: string
           id?: string
           image_url?: string | null
+          lodge_profile_id?: string | null
           inspection_notes?: string | null
           is_beta?: boolean
           kind?: string
@@ -240,6 +247,8 @@ export type Database = {
           ownership_proof_path?: string | null
           period?: string
           price?: number
+          room_image_urls?: string[]
+          room_location?: string | null
           provider_phone?: string | null
           school?: string
           status?: Database["public"]["Enums"]["listing_status"]

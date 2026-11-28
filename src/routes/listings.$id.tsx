@@ -365,9 +365,17 @@ function ListingDetail() {
               )}
             </div>
 
+            {l.roomImages && l.roomImages.length > 1 && (
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {l.roomImages.slice(1).map((url, index) => (
+                  <img key={`${url}-${index}`} src={url} alt={`${l.title} room view ${index + 2}`} className="aspect-[4/3] w-full rounded-xl border border-border object-cover" />
+                ))}
+              </div>
+            )}
+
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-border/60 bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
-                {l.kind}
+                {l.lodgeProfile ? (l.kind === "Bedspace" ? "Bedspace opening" : "Room opening") : l.kind}
               </span>
               {l.verified ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/95 px-3 py-1 text-xs font-semibold text-primary-foreground shadow-xs">
@@ -386,6 +394,8 @@ function ListingDetail() {
             <p className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
               <MapPin className="h-4 w-4 text-leaf" /> {l.area} · {l.school} · {l.distance}
             </p>
+            {l.roomLocation && <p className="mt-2 text-sm font-medium">Room location: {l.roomLocation}</p>}
+            {l.videoUrl && <a href={l.videoUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">Watch room video →</a>}
 
             <div className="mt-6 border-t border-border/80 pt-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -395,6 +405,21 @@ function ListingDetail() {
                 {l.description}
               </p>
             </div>
+
+            {l.lodgeProfile && (
+              <div className="mt-8 border-t border-border/80 pt-6">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">About {l.lodgeProfile.name}</h2>
+                {l.lodgeProfile.description && <p className="mt-2 text-sm leading-relaxed text-foreground/90">{l.lodgeProfile.description}</p>}
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
+                  {[["Front of lodge", l.lodgeProfile.frontPhotoUrl], ["Compound", l.lodgeProfile.compoundPhotoUrl], ["Lobby", l.lodgeProfile.lobbyPhotoUrl]].map(([label, url]) => (
+                    <figure key={label}>
+                      <img src={url} alt={`${l.lodgeProfile!.name} ${label.toLowerCase()}`} className="aspect-[4/3] w-full rounded-lg object-cover" />
+                      <figcaption className="mt-1 text-center text-[10px] text-muted-foreground sm:text-xs">{label}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 border-t border-border/80 pt-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -434,7 +459,9 @@ function ListingDetail() {
               </div>
 
               <div className="mt-6 space-y-2.5">
-                {typeof l.availableRooms === "number" && (
+                {l.lodgeProfile ? (
+                  <p className="rounded-lg bg-secondary/60 px-3 py-2 text-sm font-medium text-secondary-foreground">This room opening is currently available</p>
+                ) : typeof l.availableRooms === "number" && (
                   <p className="rounded-lg bg-secondary/60 px-3 py-2 text-sm font-medium text-secondary-foreground">
                     {l.availableRooms} {l.availableRooms === 1 ? "room" : "rooms"} currently available
                   </p>

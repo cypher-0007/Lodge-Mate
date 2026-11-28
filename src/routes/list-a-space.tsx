@@ -154,6 +154,24 @@ function ListASpace() {
     }
   };
 
+  if (isHost) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <SiteHeader />
+        <main className="mx-auto flex w-full max-w-3xl flex-1 items-center px-5 py-16">
+          <div className="w-full rounded-2xl border border-border bg-card p-8 shadow-card">
+            <h1 className="text-2xl font-bold">Manage your lodge profiles</h1>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Add each lodge once with its property photos and proof. Create a new room opening under that lodge whenever space becomes available.
+            </p>
+            <Button asChild className="mt-5"><Link to="/host">Open Host panel</Link></Button>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />

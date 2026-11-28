@@ -59,7 +59,7 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
 
           {/* Accommodation Type Badge */}
           <span className="absolute left-3 top-3 inline-flex items-center rounded-full border border-border/40 bg-background/95 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
-            {l.kind}
+              {l.lodgeProfile ? (l.kind === "Bedspace" ? "Bedspace opening" : "Room opening") : l.kind}
           </span>
 
           {/* Action Row on Top Right: Verified Badge & Bookmark Button */}
@@ -115,7 +115,11 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
             </Link>
           </h3>
 
-          {typeof l.availableRooms === "number" && (
+          {l.lodgeProfile && <p className="mt-1 text-xs font-medium text-primary">At {l.lodgeProfile.name}</p>}
+          {l.roomLocation && <p className="mt-1 text-xs text-muted-foreground">{l.roomLocation}</p>}
+          {l.lodgeProfile ? (
+            <p className="mt-1 text-xs font-medium text-emerald-700">Available room opening</p>
+          ) : typeof l.availableRooms === "number" && (
             <p className="mt-1 text-xs font-medium text-muted-foreground">
               {l.availableRooms} {l.availableRooms === 1 ? "room" : "rooms"} available
             </p>

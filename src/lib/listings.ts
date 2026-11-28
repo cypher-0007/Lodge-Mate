@@ -29,6 +29,17 @@ export type Listing = {
   verified: boolean;
   amenities: string[];
   description: string;
+  roomLocation?: string | null;
+  roomImages?: string[];
+  videoUrl?: string | null;
+  lodgeProfile?: {
+    id: string;
+    name: string;
+    description: string;
+    frontPhotoUrl: string;
+    compoundPhotoUrl: string;
+    lobbyPhotoUrl: string;
+  } | null;
   availableRooms?: number;
   host: ListingHost;
   ownerId?: string;
@@ -195,6 +206,18 @@ type DatabaseListingRow = {
   status: string;
   is_beta?: boolean;
   available_rooms?: number;
+  lodge_profile_id?: string | null;
+  room_location?: string | null;
+  room_image_urls?: string[] | null;
+  video_url?: string | null;
+  lodge_profile?: {
+    id: string;
+    name: string;
+    description: string;
+    front_photo_url: string;
+    compound_photo_url: string;
+    lobby_photo_url: string;
+  } | null;
   created_at: string;
   profiles?: {
     full_name: string | null;
@@ -242,6 +265,19 @@ export function transformDatabaseListing(row: DatabaseListingRow): Listing {
     amenities: Array.isArray(row.amenities) ? row.amenities : [],
     description: row.description || "No description provided.",
     availableRooms: Math.max(0, Number(row.available_rooms) || 1),
+    roomLocation: row.room_location ?? null,
+    roomImages: Array.isArray(row.room_image_urls) && row.room_image_urls.length > 0
+      ? row.room_image_urls
+      : row.image_url ? [row.image_url] : [],
+    videoUrl: row.video_url ?? null,
+    lodgeProfile: row.lodge_profile ? {
+      id: row.lodge_profile.id,
+      name: row.lodge_profile.name,
+      description: row.lodge_profile.description,
+      frontPhotoUrl: row.lodge_profile.front_photo_url,
+      compoundPhotoUrl: row.lodge_profile.compound_photo_url,
+      lobbyPhotoUrl: row.lodge_profile.lobby_photo_url,
+    } : null,
     ownerId: row.owner_id,
     isBeta: Boolean(row.is_beta),
     createdAt: row.created_at,
@@ -260,9 +296,9 @@ export function transformDatabaseListing(row: DatabaseListingRow): Listing {
  */
 export async function fetchListings(): Promise<Listing[]> {
   if (isSupabaseConfigured()) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("listings")
-      .select("*, profiles:owner_id(full_name, provider_type, created_at)")
+      .select("*, profiles:owner_id(full_name, provider_type, created_at), lodge_profile:lodge_profiles!listings_lodge_profile_id_fkey(id,name,description,front_photo_url,compound_photo_url,lobby_photo_url)")
       .eq("status", "approved")
       .order("created_at", { ascending: false });
 
@@ -293,9 +329,9 @@ export async function fetchListings(): Promise<Listing[]> {
  */
 export async function fetchListingById(id: string): Promise<Listing | null> {
   if (isSupabaseConfigured()) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("listings")
-      .select("*, profiles:owner_id(full_name, provider_type, created_at)")
+      .select("*, profiles:owner_id(full_name, provider_type, created_at), lodge_profile:lodge_profiles!listings_lodge_profile_id_fkey(id,name,description,front_photo_url,compound_photo_url,lobby_photo_url)")
       .eq("id", id)
       .eq("status", "approved")
       .maybeSingle();

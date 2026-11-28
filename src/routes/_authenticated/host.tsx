@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { uploadOwnershipProof } from "@/lib/ownership-proof";
+import { uploadPublicListingMedia, uploadRoomVideo } from "@/lib/listing-media";
 
 export const Route = createFileRoute("/_authenticated/host")({
   head: () => ({
@@ -64,7 +65,24 @@ const emptyForm = {
   availableRooms: "1",
 };
 
+const emptyLodgeForm = { name: "", school: "MOUAU", area: "", distance: "", description: "" };
+
 type FormState = typeof emptyForm;
+
+type LodgeProfile = {
+  id: string;
+  owner_id: string;
+  name: string;
+  school: string;
+  area: string;
+  distance: string;
+  description: string;
+  front_photo_url: string;
+  compound_photo_url: string;
+  lobby_photo_url: string;
+  ownership_proof_path: string;
+  status: string;
+};
 
 /** Minimal typed shape for a row returned by the host-listings query. */
 type HostListing = {
@@ -84,6 +102,10 @@ type HostListing = {
   created_at: string;
   available_rooms: number;
   ownership_proof_path: string | null;
+  lodge_profile_id: string | null;
+  room_location: string | null;
+  room_image_urls: string[] | null;
+  video_url: string | null;
 };
 
 function HostPanel() {
@@ -92,9 +114,18 @@ function HostPanel() {
 
   // ── Create form state ──────────────────────────────────────────────────────
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [createImages, setCreateImages] = useState<ImageFileItem[]>([]);
-  const [ownershipProofFile, setOwnershipProofFile] = useState<File | null>(null);
-  const [editOwnershipProofFile, setEditOwnershipProofFile] = useState<File | null>(null);
+  const [lodgeForm, setLodgeForm] = useState(emptyLodgeForm);
+  const [lodgePhotos, setLodgePhotos] = useState<{ front: File | null; compound: File | null; lobby: File | null }>({ front: null, compound: null, lobby: null });
+  const [lodgeProof, setLodgeProof] = useState<File | null>(null);
+  const [selectedLodgeId, setSelectedLodgeId] = useState("");
+  const [roomPhotos, setRoomPhotos] = useState<File[]>([]);
+  const [roomPhotoInputVersion, setRoomPhotoInputVersion] = useState(0);
+  const [lodgePhotoInputVersion, setLodgePhotoInputVersion] = useState(0);
+  const [roomLocation, setRoomLocation] = useState("Upstairs");
+  const [roomLocationOther, setRoomLocationOther] = useState("");
+  const [roomVideoUrl, setRoomVideoUrl] = useState("");
+  const [roomVideoFile, setRoomVideoFile] = useState<File | null>(null);
+  const [roomVideoInputVersion, setRoomVideoInputVersion] = useState(0);
   const [busy, setBusy] = useState(false);
 
   // ── Edit dialog state ──────────────────────────────────────────────────────
@@ -103,6 +134,17 @@ function HostPanel() {
   const [editImages, setEditImages] = useState<ImageFileItem[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editBusy, setEditBusy] = useState(false);
+
+  const lodgeProfiles = useQuery<LodgeProfile[]>({
+    queryKey: ["host-lodge-profiles", user?.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("lodge_profiles").select("*").eq("owner_id", user!.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as LodgeProfile[];
+    },
+    enabled: !!user,
+  });
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const listings = useQuery({
@@ -164,78 +206,110 @@ function HostPanel() {
     enabled: !!user,
   });
 
-  // ── Create listing ─────────────────────────────────────────────────────────
+  const createLodgeProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!lodgePhotos.front || !lodgePhotos.compound || !lodgePhotos.lobby || !lodgeProof) {
+      toast.error("Complete the lodge profile photos and ownership proof first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const [front, compound, lobby] = await Promise.all([
+        uploadPublicListingMedia([lodgePhotos.front], user.id, "lodges"),
+        uploadPublicListingMedia([lodgePhotos.compound], user.id, "lodges"),
+        uploadPublicListingMedia([lodgePhotos.lobby], user.id, "lodges"),
+      ]);
+      const proofPath = await uploadOwnershipProof(lodgeProof, user.id);
+      const { data, error } = await (supabase as any).from("lodge_profiles").insert({
+        owner_id: user.id,
+        ...lodgeForm,
+        front_photo_url: front[0],
+        compound_photo_url: compound[0],
+        lobby_photo_url: lobby[0],
+        ownership_proof_path: proofPath,
+        status: "pending",
+      }).select("id").single();
+      if (error) throw error;
+      toast.success("Lodge profile submitted", { description: "A reviewer will check the property profile and ownership proof." });
+      setLodgeForm(emptyLodgeForm);
+      setLodgePhotos({ front: null, compound: null, lobby: null });
+      setLodgeProof(null);
+      setLodgePhotoInputVersion((value) => value + 1);
+      if (data?.id) setSelectedLodgeId(data.id);
+      void qc.invalidateQueries({ queryKey: ["host-lodge-profiles", user.id] });
+    } catch (err) {
+      toast.error("Could not submit lodge profile", { description: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ── Create a room opening under a reusable lodge profile ───────────────────
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    setBusy(true);
-
-    let image_url: string | null = null;
-
-    // Upload primary photo if provided
-    if (createImages.length > 0) {
-      const { primaryUrl, error: uploadErr } = await uploadListingPhotos(createImages, user.id);
-      if (uploadErr) {
-        toast.warning("Photo upload failed", {
-          description: `The listing will be saved without a photo. Reason: ${uploadErr}`,
-        });
-      } else {
-        image_url = primaryUrl;
-      }
-    }
-
-    let ownership_proof_path: string | null = null;
-    if (providerType === "landlord") {
-      if (!ownershipProofFile) {
-        setBusy(false);
-        toast.error("Ownership proof required", { description: "Upload proof for this specific lodge before submitting." });
-        return;
-      }
-      try {
-        ownership_proof_path = await uploadOwnershipProof(ownershipProofFile, user.id);
-      } catch (err) {
-        setBusy(false);
-        toast.error("Could not upload ownership proof", { description: err instanceof Error ? err.message : "Try again." });
-        return;
-      }
-    }
-
-    const { error } = await supabase.from("listings").insert({
-      owner_id: user.id,
-      title: form.title,
-      kind: form.kind,
-      school: form.school,
-      area: form.area,
-      distance: form.distance,
-      price: Number(form.price) || 0,
-      available_rooms: Number(form.availableRooms) || 1,
-      ownership_proof_path,
-      period: form.period,
-      description: form.description,
-      amenities: form.amenities
-        .split(",")
-        .map((a) => a.trim())
-        .filter(Boolean),
-      status: "pending",
-      verified: false,
-      ...(image_url ? { image_url } : {}),
-    });
-
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
+    const lodge = lodgeProfiles.data?.find((item) => item.id === selectedLodgeId);
+    if (!lodge) {
+      toast.error("Choose one of your lodge profiles first.");
       return;
     }
-    toast.success("Listing submitted", { description: "It goes live once an admin approves it." });
-    setForm(emptyForm);
-    setCreateImages([]);
-    setOwnershipProofFile(null);
-    void qc.invalidateQueries({ queryKey: ["host-listings"] });
+    if (roomPhotos.length === 0 || roomPhotos.length > 5) {
+      toast.error("Add between one and five photos of the available room.");
+      return;
+    }
+    if (roomLocation === "Other" && !roomLocationOther.trim()) {
+      toast.error("Enter where the room is located in the lodge.");
+      return;
+    }
+    if (roomVideoFile && roomVideoUrl.trim()) {
+      toast.error("Choose a video upload or a video link, not both.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const roomImageUrls = await uploadPublicListingMedia(roomPhotos, user.id, "rooms");
+      const uploadedVideoUrl = roomVideoFile ? await uploadRoomVideo(roomVideoFile, user.id) : null;
+      const { error } = await supabase.from("listings").insert({
+        owner_id: user.id,
+        lodge_profile_id: lodge.id,
+        title: form.title.trim(),
+        kind: form.kind,
+        school: lodge.school,
+        area: lodge.area,
+        distance: lodge.distance,
+        price: Number(form.price) || 0,
+        available_rooms: 1,
+        room_location: roomLocation === "Other" ? roomLocationOther.trim() : roomLocation,
+        room_image_urls: roomImageUrls,
+        video_url: uploadedVideoUrl || roomVideoUrl.trim() || null,
+        period: form.period,
+        description: form.description,
+        amenities: form.amenities.split(",").map((a) => a.trim()).filter(Boolean),
+        image_url: roomImageUrls[0] ?? null,
+        status: "pending",
+        verified: false,
+      });
+      if (error) throw error;
+      toast.success("Room opening submitted", { description: "It will appear under this lodge after moderation." });
+      setForm(emptyForm);
+      setRoomPhotos([]);
+      setRoomPhotoInputVersion((value) => value + 1);
+      setRoomVideoUrl("");
+      setRoomVideoFile(null);
+      setRoomVideoInputVersion((value) => value + 1);
+      setRoomLocation("Upstairs");
+      setRoomLocationOther("");
+      void qc.invalidateQueries({ queryKey: ["host-listings", user.id] });
+    } catch (err) {
+      toast.error("Could not submit room opening", { description: err instanceof Error ? err.message : "Try again." });
+    } finally {
+      setBusy(false);
+    }
   };
 
   // ── Open Edit dialog ───────────────────────────────────────────────────────
   const openEdit = (l: HostListing) => {
-    setEditOwnershipProofFile(null);
     setEditingListing(l);
     setEditForm({
       title: l.title ?? "",
@@ -271,22 +345,6 @@ function HostPanel() {
     setEditBusy(true);
 
     let image_url: string | null = editingListing.image_url ?? null;
-    let ownership_proof_path = editingListing.ownership_proof_path;
-
-    if (providerType === "landlord" && (!ownership_proof_path || editOwnershipProofFile)) {
-      if (!editOwnershipProofFile) {
-        setEditBusy(false);
-        toast.error("Ownership proof required", { description: "Upload proof for this lodge before saving." });
-        return;
-      }
-      try {
-        ownership_proof_path = await uploadOwnershipProof(editOwnershipProofFile, user.id);
-      } catch (err) {
-        setEditBusy(false);
-        toast.error("Could not upload ownership proof", { description: err instanceof Error ? err.message : "Try again." });
-        return;
-      }
-    }
 
     // Upload new photo if the user selected one
     const hasNewFiles = editImages.some((img) => !img.isExisting);
@@ -316,7 +374,6 @@ function HostPanel() {
         distance: editForm.distance,
         price: Number(editForm.price) || 0,
         available_rooms: Number(editForm.availableRooms) || 1,
-        ownership_proof_path,
         period: editForm.period,
         description: editForm.description,
         amenities: editForm.amenities
@@ -465,92 +522,86 @@ function HostPanel() {
         badge={roleLabel}
       >
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* ── Post a room ─────────────────────────────────────────────── */}
-          <Panel title="Add a lodge listing" description="Create a listing for each lodge you manage, set how many rooms are available, and submit proof for each property.">
-            <form className="space-y-4" onSubmit={create}>
+          <Panel title="Create a lodge profile" description="Add this property once. Its front, compound, lobby photos and ownership proof stay with the lodge profile.">
+            <form className="space-y-4" onSubmit={createLodgeProfile}>
               <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" className="mt-2" required {...createField("title")} />
+                <Label htmlFor="lodge-name">Lodge name</Label>
+                <Input id="lodge-name" className="mt-2" placeholder="GoodNews Lodge" value={lodgeForm.name} onChange={(e) => setLodgeForm({ ...lodgeForm, name: e.target.value })} required />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="kind">Type</Label>
-                  <select
-                    id="kind"
-                    className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    {...createField("kind")}
-                  >
-                    <option value="Full lodge">Rooms / units in a lodge</option>
-                    <option>Bedspace</option>
-                    <option>Takeover</option>
+                  <Label htmlFor="lodge-school">Nearest school</Label>
+                  <select id="lodge-school" className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={lodgeForm.school} onChange={(e) => setLodgeForm({ ...lodgeForm, school: e.target.value })}>
+                    <option value="MOUAU">MOUAU (Umudike)</option><option value="ABSU">ABSU (Uturu)</option>
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="school">School</Label>
-                  <select
-                    id="school"
-                    className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    {...createField("school")}
-                  >
-                    <option value="MOUAU">MOUAU (Umudike)</option>
-                    <option value="ABSU">ABSU (Uturu)</option>
-                  </select>
+                  <Label htmlFor="lodge-area">Area / landmark</Label>
+                  <Input id="lodge-area" className="mt-2" value={lodgeForm.area} onChange={(e) => setLodgeForm({ ...lodgeForm, area: e.target.value })} required />
                 </div>
-                <div>
-                  <Label htmlFor="area">Area</Label>
-                  <Input id="area" className="mt-2" placeholder="Ishiagu, Umudike…" {...createField("area")} />
-                </div>
-                <div>
-                  <Label htmlFor="distance">Distance</Label>
-                  <Input id="distance" className="mt-2" placeholder="6 min walk" {...createField("distance")} />
-                </div>
-                <div>
-                  <Label htmlFor="price">Price (₦)</Label>
-                  <Input id="price" type="number" className="mt-2" required {...createField("price")} />
-                </div>
-                <div>
-                  <Label htmlFor="period">Period</Label>
-                  <Input id="period" className="mt-2" placeholder="per year" {...createField("period")} />
-                </div>
-                <div>
-                  <Label htmlFor="availableRooms">Rooms available in this lodge</Label>
-                  <Input id="availableRooms" className="mt-2" type="number" min={1} step={1} required {...createField("availableRooms")} />
-                </div>
-              </div>
-              {providerType === "landlord" && (
-                <div>
-                  <Label htmlFor="ownership-proof">Proof of ownership for this lodge</Label>
-                  <Input id="ownership-proof" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={(event) => setOwnershipProofFile(event.target.files?.[0] ?? null)} />
-                  <p className="mt-1 text-xs text-muted-foreground">Private to you and LodgeMate reviewers. Upload proof for each lodge you list (max 10 MB).</p>
-                </div>
-              )}
-              <div>
-                <Label htmlFor="amenities">Amenities (comma separated)</Label>
-                <Input
-                  id="amenities"
-                  className="mt-2"
-                  placeholder="Prepaid meter, Borehole, Fenced"
-                  {...createField("amenities")}
-                />
               </div>
               <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" className="mt-2" rows={4} {...createField("description")} />
+                <Label htmlFor="lodge-distance">Distance from campus</Label>
+                <Input id="lodge-distance" className="mt-2" placeholder="6 min walk" value={lodgeForm.distance} onChange={(e) => setLodgeForm({ ...lodgeForm, distance: e.target.value })} required />
               </div>
-
-              {/* Photo upload */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                {([['front', 'Front of lodge'], ['compound', 'Compound'], ['lobby', 'Lobby']] as const).map(([key, label]) => (
+                  <div key={key}>
+                    <Label htmlFor={`lodge-${key}`}>{label} photo</Label>
+                    <Input key={lodgePhotoInputVersion} id={`lodge-${key}`} className="mt-2 px-2 py-2 text-xs" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(e) => setLodgePhotos({ ...lodgePhotos, [key]: e.target.files?.[0] ?? null })} />
+                  </div>
+                ))}
+              </div>
               <div>
-                <Label className="mb-2 block">Photos (optional)</Label>
-                <ListingImageUpload images={createImages} onChange={setCreateImages} maxFiles={5} />
+                <Label htmlFor="lodge-proof">{providerType === "agent" ? "Ownership or management authorization for this lodge" : "Ownership proof for this lodge"}</Label>
+                <Input key={`proof-${lodgePhotoInputVersion}`} id="lodge-proof" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={(e) => setLodgeProof(e.target.files?.[0] ?? null)} />
+                <p className="mt-1 text-xs text-muted-foreground">Submitted once per lodge profile for private review.</p>
               </div>
-
-              <Button type="submit" disabled={busy}>
-                {busy ? "Submitting…" : "Submit listing"}
-              </Button>
+              <div>
+                <Label htmlFor="lodge-description">About the property</Label>
+                <Textarea id="lodge-description" className="mt-2" rows={3} value={lodgeForm.description} onChange={(e) => setLodgeForm({ ...lodgeForm, description: e.target.value })} />
+              </div>
+              <Button type="submit" disabled={busy}>{busy ? "Submitting…" : "Submit lodge profile"}</Button>
             </form>
+            <div className="mt-6 border-t border-border pt-4">
+              <h3 className="font-semibold">Your lodge profiles</h3>
+              {lodgeProfiles.data?.length ? <ul className="mt-3 space-y-2">{lodgeProfiles.data.map((lodge) => (
+                <li key={lodge.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                  <div className="flex items-center gap-3"><img src={lodge.front_photo_url} alt="" className="h-12 w-14 rounded-md object-cover" /><div><p className="text-sm font-medium">{lodge.name}</p><p className="text-xs text-muted-foreground">{lodge.school} · {lodge.area}</p></div></div>
+                  <StatusPill status={lodge.status} />
+                </li>
+              ))}</ul> : <p className="mt-2 text-sm text-muted-foreground">Add a lodge profile before posting an opening.</p>}
+            </div>
           </Panel>
 
           <div className="space-y-6">
+            <Panel title="Post an available room" description="Choose a lodge profile, then describe the specific opening. Ownership proof is already attached to the lodge profile.">
+              <form className="space-y-4" onSubmit={create}>
+                <div>
+                  <Label htmlFor="opening-lodge">Lodge profile</Label>
+                  <select id="opening-lodge" className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedLodgeId} onChange={(e) => setSelectedLodgeId(e.target.value)} required>
+                    <option value="">Choose a lodge</option>
+                    {lodgeProfiles.data?.map((lodge) => <option key={lodge.id} value={lodge.id}>{lodge.name} · {lodge.area} ({lodge.status})</option>)}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label htmlFor="opening-title">Room / unit title</Label><Input id="opening-title" className="mt-2" placeholder="Self-contained room" required {...createField("title")} /></div>
+                  <div><Label htmlFor="opening-kind">Space type</Label><select id="opening-kind" className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" {...createField("kind")}><option value="Full lodge">Room / unit</option><option value="Bedspace">Bedspace</option></select></div>
+                  <div><Label htmlFor="room-location">Location in lodge</Label><select id="room-location" className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={roomLocation} onChange={(e) => setRoomLocation(e.target.value)}><option>Upstairs</option><option>Downstairs</option><option>Ground floor</option><option>Annex</option><option>Other</option></select></div>
+                  <div><Label htmlFor="opening-price">Price (₦)</Label><Input id="opening-price" className="mt-2" type="number" min={1} required {...createField("price")} /></div>
+                  <div><Label htmlFor="opening-period">Price period</Label><Input id="opening-period" className="mt-2" placeholder="per year" required {...createField("period")} /></div>
+                </div>
+                {roomLocation === "Other" && <div><Label htmlFor="room-location-other">Describe the room location</Label><Input id="room-location-other" className="mt-2" placeholder="e.g. Rear block, second floor" value={roomLocationOther} onChange={(e) => setRoomLocationOther(e.target.value)} required /></div>}
+                <div><Label htmlFor="opening-description">Room details</Label><Textarea id="opening-description" className="mt-2" rows={4} placeholder="Describe the room, facilities and what is included." required {...createField("description")} /></div>
+                <div><Label htmlFor="opening-amenities">Room amenities (comma separated)</Label><Input id="opening-amenities" className="mt-2" placeholder="Private bathroom, wardrobe, prepaid meter" {...createField("amenities")} /></div>
+                <div><Label htmlFor="room-photos">Room photos</Label><Input key={roomPhotoInputVersion} id="room-photos" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(e) => setRoomPhotos(Array.from(e.target.files ?? []))} /><p className="mt-1 text-xs text-muted-foreground">Add up to five photos of this opening (5 MB max each).</p></div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div><Label htmlFor="room-video-file">Upload room video (optional)</Label><Input key={roomVideoInputVersion} id="room-video-file" className="mt-2 px-2 py-2 text-xs" type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(e) => setRoomVideoFile(e.target.files?.[0] ?? null)} /><p className="mt-1 text-xs text-muted-foreground">MP4, WebM or MOV · max 50 MB</p></div>
+                  <div><Label htmlFor="room-video">Or paste a video link</Label><Input id="room-video" className="mt-2" type="url" placeholder="https://…" value={roomVideoUrl} onChange={(e) => setRoomVideoUrl(e.target.value)} /></div>
+                </div>
+                <Button type="submit" disabled={busy || !lodgeProfiles.data?.length}>{busy ? "Submitting…" : "Submit room opening"}</Button>
+              </form>
+            </Panel>
             {/* ── My listings ───────────────────────────────────────────── */}
             <Panel title="My listings">
               {listings.isLoading && (
@@ -563,6 +614,7 @@ function HostPanel() {
                 <ul className="space-y-3">
                   {listings.data.map((l) => {
                     const isTaken = l.status === "removed";
+                    const lodge = lodgeProfiles.data?.find((item) => item.id === l.lodge_profile_id);
                     return (
                       <li key={l.id} className="rounded-xl border border-border bg-card p-4">
                         {/* Thumbnail + details row */}
@@ -582,7 +634,7 @@ function HostPanel() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <p className="truncate font-medium text-sm">{l.title}</p>
-                                <p className="text-xs text-muted-foreground">{l.available_rooms} {l.available_rooms === 1 ? "room" : "rooms"} available · {l.ownership_proof_path ? "ownership proof submitted" : "no lodge proof on file"}</p>
+                                <p className="text-xs font-medium text-primary">{lodge?.name ?? "Legacy listing"}{l.room_location ? ` · ${l.room_location}` : ""}</p>
                                 <p className="text-xs text-muted-foreground">
                                   {l.school} · {l.area} · ₦{l.price.toLocaleString()} {l.period}
                                 </p>
@@ -756,10 +808,6 @@ function HostPanel() {
                 </select>
               </div>
               <div>
-                <Label htmlFor="edit-available-rooms">Rooms available in this lodge</Label>
-                <Input id="edit-available-rooms" className="mt-2" type="number" min={1} step={1} required {...editField("availableRooms")} />
-              </div>
-              <div>
                 <Label htmlFor="edit-school">School</Label>
                 <select
                   id="edit-school"
@@ -801,13 +849,6 @@ function HostPanel() {
               <Label htmlFor="edit-description">Description</Label>
               <Textarea id="edit-description" className="mt-2" rows={4} {...editField("description")} />
             </div>
-
-            {providerType === "landlord" && (
-              <div>
-                <Label htmlFor="edit-ownership-proof">{editingListing?.ownership_proof_path ? "Replace lodge ownership proof (optional)" : "Proof of ownership for this lodge"}</Label>
-                <Input id="edit-ownership-proof" className="mt-2" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required={!editingListing?.ownership_proof_path} onChange={(event) => setEditOwnershipProofFile(event.target.files?.[0] ?? null)} />
-              </div>
-            )}
 
             {/* Photo upload */}
             <div>
