@@ -4,6 +4,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
+  Bell,
+  CalendarDays,
   ChevronDown,
   LayoutDashboard,
   LogOut,
@@ -37,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth-context";
 import { useUnreadCountQuery } from "@/lib/messaging";
+import { useUserNotifications } from "@/lib/user-notifications";
 import { cn } from "@/lib/utils";
 
 // Streamlined main navigation links (Home restored after logo; FAQ removed from navbar & retained in footer)
@@ -273,6 +276,7 @@ function HeaderActions({
 }) {
   const { user, profile, isHost, isAdmin, isStudent, providerType, signOut } = useAuth();
   const { data: unreadCount = 0 } = useUnreadCountQuery(user?.id);
+  const { unreadCount: notificationCount } = useUserNotifications(user?.id, isHost);
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const navigate = useNavigate();
@@ -431,6 +435,37 @@ function HeaderActions({
               </Link>
             </Button>
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start h-9 rounded-xl relative"
+              asChild
+              onClick={onAction}
+            >
+              <Link to="/notifications">
+                <Bell className="mr-2 h-4 w-4" />
+                Notifications
+                {notificationCount > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                    {notificationCount > 99 ? "99+" : notificationCount}
+                  </span>
+                )}
+              </Link>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start h-9 rounded-xl"
+              asChild
+              onClick={onAction}
+            >
+              <Link to="/inspections">
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Upcoming inspections
+              </Link>
+            </Button>
+
             {/* Profile & Settings */}
             <Button
               variant="outline"
@@ -521,6 +556,27 @@ function HeaderActions({
             </Link>
           </Button>
         )}
+
+        <Button variant="ghost" size="icon" asChild className="relative" onClick={onAction}>
+          <Link
+            to="/notifications"
+            aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} unread)` : ""}`}
+            title="Notifications"
+          >
+            <Bell />
+            {notificationCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            )}
+          </Link>
+        </Button>
+
+        <Button variant="ghost" size="icon" asChild onClick={onAction}>
+          <Link to="/inspections" aria-label="Upcoming inspections" title="Upcoming inspections">
+            <CalendarDays />
+          </Link>
+        </Button>
 
         {/* Visible Messages Action with live unread badge */}
         <Button
